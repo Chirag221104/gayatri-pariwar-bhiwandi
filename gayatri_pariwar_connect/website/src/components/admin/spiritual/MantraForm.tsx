@@ -5,7 +5,7 @@ import { Save, Loader2, ArrowLeft, Palette, Settings2, Music } from "lucide-reac
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { logAdminAction } from "@/lib/admin-logger";
-import AdminTextField from "@/components/admin/AdminTextField";
+import AdminTextField from "../AdminTextField";
 
 interface MantraFormProps {
     initialData?: {
