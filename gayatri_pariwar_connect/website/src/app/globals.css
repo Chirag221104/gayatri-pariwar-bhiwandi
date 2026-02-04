@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-saffron: #f59e0b;
+  --color-saffron-dark: #B5550C;
+  --color-saffron-light: #fbbf24;
+  --color-gold: #fbbf24;
+  --color-cream: #fffaf0;
+  --color-brand-red: #ff0000;
+  --color-brand-facebook: #1877f2;
+  --color-brand-instagram: #e1306c;
+
+  --font-family-display: var(--font-display);
+  --font-family-body: var(--font-body);
+
+  --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+}
+
+:root {
+  --background: #fffaf0;
+  --foreground: #0f172a;
+  --muted: #64748b;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --media-text: #000000;
+}
+
+.dark {
+  --background: #020617;
+  --foreground: #f8fafc;
+  --muted: #94a3b8;
+  --glass-bg: rgba(15, 23, 42, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --media-text: #ffffff;
+}
+
+@utility glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-glass);
+}
+
+@utility glass-dark {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@utility mesh-gradient {
+  background-color: #f59e0b;
+  background-image:
+    radial-gradient(at 0% 0%, hsla(38, 90%, 85%, 1) 0, transparent 50%),
+    radial-gradient(at 50% 0%, hsla(34, 85%, 82%, 1) 0, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(22, 85%, 85%, 1) 0, transparent 50%),
+    radial-gradient(at 0% 50%, hsla(42, 80%, 88%, 1) 0, transparent 50%),
+    radial-gradient(at 100% 50%, hsla(20, 80%, 85%, 1) 0, transparent 50%),
+    radial-gradient(at 0% 100%, hsla(42, 80%, 92%, 1) 0, transparent 50%),
+    radial-gradient(at 50% 100%, hsla(34, 80%, 90%, 1) 0, transparent 50%),
+    radial-gradient(at 100% 100%, hsla(22, 80%, 90%, 1) 0, transparent 50%);
+}
+
+.dark .mesh-gradient {
+  background-color: #78350f;
+  background-image:
+    radial-gradient(at 0% 0%, hsla(38, 60%, 15%, 1) 0, transparent 50%),
+    radial-gradient(at 50% 0%, hsla(34, 60%, 12%, 1) 0, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(22, 60%, 15%, 1) 0, transparent 50%),
+    radial-gradient(at 0% 50%, hsla(42, 50%, 10%, 1) 0, transparent 50%),
+    radial-gradient(at 100% 50%, hsla(20, 50%, 8%, 1) 0, transparent 50%),
+    radial-gradient(at 0% 100%, hsla(42, 50%, 12%, 1) 0, transparent 50%),
+    radial-gradient(at 50% 100%, hsla(34, 50%, 10%, 1) 0, transparent 50%),
+    radial-gradient(at 100% 100%, hsla(22, 50%, 12%, 1) 0, transparent 50%);
+}
+
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    @apply antialiased selection:bg-saffron/20 selection:text-saffron-dark transition-colors duration-300;
+  }
+
+  /* Indic Font Support */
+  html[lang="hi"],
+  html[lang="mr"] {
+    --font-family-body: var(--font-devanagari), var(--font-body);
+    --font-family-display: var(--font-devanagari), var(--font-display);
+  }
+
+  html[lang="gu"] {
+    --font-family-body: var(--font-gujarati), var(--font-body);
+    --font-family-display: var(--font-gujarati), var(--font-display);
+  }
+
+  /* Reset tracking for Indic scripts as it breaks vowel marks and conjuncts */
+  html[lang="hi"] *,
+  html[lang="mr"] *,
+  html[lang="gu"] * {
+    letter-spacing: normal !important;
+    font-variant-ligatures: normal !important;
+    font-feature-settings: "kern", "liga", "clig" !important;
+  }
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Text shadow for page titles */
+.title-shadow {
+  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.15), 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.dark .title-shadow {
+  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.4), 0 2px 10px rgba(0, 0, 0, 0.3);
+}
