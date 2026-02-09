@@ -50,7 +50,6 @@ const navGroups: NavGroup[] = [
         suites: ['app', 'granthalaya'],
         items: [
             { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-            { name: "Admin Logs", href: "/admin/logs", icon: History },
         ]
     },
     {
@@ -71,6 +70,7 @@ const navGroups: NavGroup[] = [
             { name: "Service Management", href: "/admin/services", icon: ClipboardList },
             { name: "Important Info", href: "/admin/info", icon: Info },
             { name: "Festival Calendar", href: "/admin/calendar", icon: Settings },
+            { name: "App Logs", href: "/admin/logs", icon: History },
         ]
     },
     {
@@ -79,7 +79,7 @@ const navGroups: NavGroup[] = [
         items: [
             { name: "Inventory", href: "/admin/books", icon: BookOpen },
             { name: "Fulfillment", href: "/admin/books/orders", icon: ShoppingCart },
-            { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+            { name: "Granthalaya Logs", href: "/admin/books/logs", icon: History },
             { name: "Advanced Config", href: "/admin/books/config", icon: Settings },
         ]
     },

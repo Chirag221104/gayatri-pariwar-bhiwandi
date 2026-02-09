@@ -10,12 +10,12 @@ import {
     Database,
     Eye,
     X,
-    Newspaper,
-    Sprout,
-    Users
+    BookOpen,
+    Package,
+    Truck
 } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, onSnapshot, limit } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, limit, where } from "firebase/firestore";
 import AdminTable from "@/components/admin/AdminTable";
 import { useAdminTheme } from "@/hooks/useAdminTheme";
 
@@ -34,7 +34,7 @@ interface AdminLog {
     domain?: 'granthalaya' | 'app';
 }
 
-// Collections that belong to Granthalaya domain (to be excluded)
+// Collections that belong to Granthalaya domain
 const GRANTHALAYA_COLLECTIONS = [
     'granthalaya_app',
     'books',
@@ -48,7 +48,7 @@ const GRANTHALAYA_COLLECTIONS = [
     'digital_library'
 ];
 
-export default function AppLogsPage() {
+export default function GranthalayaLogsPage() {
     const [logs, setLogs] = useState<AdminLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
@@ -70,14 +70,14 @@ export default function AppLogsPage() {
                 ...doc.data()
             })) as AdminLog[];
 
-            // Filter to App-related logs only (exclude Granthalaya)
+            // Filter to Granthalaya-related logs only
             const filtered = allData.filter(log => {
                 // Check domain field first (future-proofing)
-                if (log.domain === 'app') return true;
-                if (log.domain === 'granthalaya') return false;
+                if (log.domain === 'granthalaya') return true;
+                if (log.domain === 'app') return false;
 
-                // Fallback to collection name matching - exclude Granthalaya collections
-                return !GRANTHALAYA_COLLECTIONS.some(c =>
+                // Fallback to collection name matching
+                return GRANTHALAYA_COLLECTIONS.some(c =>
                     log.collection?.toLowerCase().includes(c.toLowerCase())
                 );
             });
@@ -153,23 +153,23 @@ export default function AppLogsPage() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
                     <h1 className={`text-3xl font-bold flex items-center gap-4 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                        <History className="w-8 h-8 text-orange-500" />
-                        App Logs
+                        <History className="w-8 h-8 text-blue-500" />
+                        Granthalaya Logs
                     </h1>
-                    <p className={`mt-2 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Activity tracking for Gayatri App modules</p>
+                    <p className={`mt-2 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Operational audit trail for books, inventory & orders</p>
 
                     {/* Scope Badge */}
                     <div className="flex items-center gap-2 mt-3">
                         <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Showing:</span>
                         <div className="flex items-center gap-1">
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-500 text-[10px] font-bold">
-                                <Calendar className="w-3 h-3" /> Events
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 text-[10px] font-bold">
+                                <BookOpen className="w-3 h-3" /> Books
                             </span>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-500 text-[10px] font-bold">
-                                <Newspaper className="w-3 h-3" /> Content
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 text-[10px] font-bold">
+                                <Package className="w-3 h-3" /> Inventory
                             </span>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-500 text-[10px] font-bold">
-                                <Users className="w-3 h-3" /> Groups
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 text-[10px] font-bold">
+                                <Truck className="w-3 h-3" /> Orders
                             </span>
                         </div>
                     </div>
@@ -177,13 +177,13 @@ export default function AppLogsPage() {
 
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="relative group">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-orange-500 transition-colors" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
                         <input
                             type="text"
                             placeholder="Search admin or activity..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className={`border rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500/50 w-64 transition-all ${isDark
+                            className={`border rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500/50 w-64 transition-all ${isDark
                                     ? 'bg-slate-900 border-slate-800 text-white'
                                     : 'bg-white border-slate-200 text-slate-900'
                                 }`}
@@ -231,7 +231,7 @@ export default function AppLogsPage() {
                     data={filteredLogs}
                     loading={loading}
                     onRowClick={(log) => setSelectedLog(log)}
-                    emptyMessage="No app logs found. System is quiet."
+                    emptyMessage="No Granthalaya logs found. Operations are quiet."
                 />
 
                 {/* Log Detail Modal */}
@@ -269,7 +269,7 @@ export default function AppLogsPage() {
                                         <label className={`text-[10px] font-bold uppercase tracking-widest px-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Performed By</label>
                                         <div className={`p-3 rounded-xl border flex items-center gap-3 ${isDark ? 'bg-slate-900/50 border-white/5' : 'bg-slate-50 border-slate-200'
                                             }`}>
-                                            <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500 font-bold">
+                                            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 font-bold">
                                                 {selectedLog.adminEmail[0].toUpperCase()}
                                             </div>
                                             <span className={`text-sm font-medium ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>{selectedLog.adminEmail}</span>
@@ -279,8 +279,8 @@ export default function AppLogsPage() {
                                         <label className={`text-[10px] font-bold uppercase tracking-widest px-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Context</label>
                                         <div className={`p-3 rounded-xl border flex items-center gap-3 ${isDark ? 'bg-slate-900/50 border-white/5' : 'bg-slate-50 border-slate-200'
                                             }`}>
-                                            <Database className="w-4 h-4 text-orange-500" />
-                                            <span className="text-sm font-mono text-orange-400 capitalize">{selectedLog.collection}</span>
+                                            <Database className="w-4 h-4 text-blue-500" />
+                                            <span className="text-sm font-mono text-blue-400 capitalize">{selectedLog.collection}</span>
                                         </div>
                                     </div>
                                     <div className="space-y-1">
@@ -295,7 +295,7 @@ export default function AppLogsPage() {
                                 <div className="space-y-6">
                                     <h4 className={`text-sm font-bold flex items-center gap-2 border-b pb-2 ${isDark ? 'text-slate-400 border-slate-800' : 'text-slate-500 border-slate-200'
                                         }`}>
-                                        <div className="w-1 h-4 bg-orange-500 rounded-full" />
+                                        <div className="w-1 h-4 bg-blue-500 rounded-full" />
                                         Data Transition
                                     </h4>
 
