@@ -6,9 +6,6 @@ const withNextIntl = createNextIntlPlugin('./src/i18n.ts');
 const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
-  turbopack: {
-    root: './',
-  },
   images: {
     remotePatterns: [
       {

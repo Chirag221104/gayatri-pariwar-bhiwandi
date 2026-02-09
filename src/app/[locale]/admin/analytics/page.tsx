@@ -155,7 +155,7 @@ export default function AnalyticsPage() {
         <div className="space-y-8">
             <SectionHeader
                 icon={BarChart3}
-                title="Business Analytics"
+                title="Dashboard"
                 subtitle="Real-time performance metrics and growth insights"
             />
 
