@@ -1,0 +1,443 @@
+{
+    "common": {
+        "brand": "Gayatri Pariwar",
+        "branch": "Bhiwandi Branch"
+    },
+    "navbar": {
+        "home": "Home",
+        "events": "Events",
+        "spiritual": "Spiritual",
+        "buy_books": "Buy Books",
+        "news": "News",
+        "about": "About Us",
+        "contact": "Contact",
+        "my_orders": "My Orders",
+        "download_app": "Download App",
+        "login": "Login",
+        "logout": "Logout",
+        "settings_label": "Settings",
+        "theme_lang_label": "Theme & Language"
+    },
+    "books": {
+        "header": {
+            "badge": "Divine Literature",
+            "title": "Gayatri Granthalaya",
+            "desc": "Explore our collection of divine literature. All books are available for purchase and home delivery."
+        },
+        "search_placeholder": "Search title or author...",
+        "filter_by_category": "Filter by Category",
+        "no_results": "No books found matching your criteria.",
+        "view_button": "View"
+    },
+    "cart": {
+        "header": {
+            "badge": "Your Selection",
+            "title": "Shopping Cart",
+            "desc": "Review your selected items and proceed to checkout for a spiritual journey."
+        },
+        "empty_title": "Your cart is empty",
+        "empty_desc": "Looking for something divine? Browse our collection of books and start your spiritual journey today.",
+        "browse_books": "Browse Books",
+        "summary_title": "Summary",
+        "total_items": "Total Items",
+        "unit_price": "Unit Price",
+        "item_total": "Item Total",
+        "subtotal": "Subtotal",
+        "delivery": "Delivery",
+        "free": "FREE",
+        "total": "Total",
+        "checkout_btn": "Proceed to Checkout",
+        "login_checkout_btn": "Login to Checkout",
+        "secure_note": "Secure payment via Razorpay. Home delivery available across Bhiwandi and surrounding areas."
+    },
+    "checkout": {
+        "header": {
+            "badge": "Final Steps",
+            "title": "Secure Checkout",
+            "desc": "Provide your delivery details and choose a payment method to complete your order."
+        },
+        "sections": {
+            "address": "Delivery Address",
+            "payment": "Payment Method"
+        },
+        "address": {
+            "add_new": "Add New",
+            "save_select": "Save & Select",
+            "adding": "Adding...",
+            "cancel": "Cancel",
+            "no_addresses": "No addresses saved yet.",
+            "form": {
+                "flat": "Flat / House No. / Office No.",
+                "society": "Society / Building Name",
+                "area": "Area / Locality",
+                "landmark": "Landmark (Optional)",
+                "pincode": "Pincode"
+            }
+        },
+        "payment": {
+            "online_title": "Online Payment",
+            "online_desc": "UPI, Cards, Netbanking via Razorpay",
+            "manual_title": "Manual Payment",
+            "manual_desc": "Pay via WhatsApp / COD",
+            "manual_confirm": "Your order will be placed as 'Pay via WhatsApp'. Our team will contact you for payment. Proceed?"
+        },
+        "summary": {
+            "title": "Order Summary",
+            "qty": "Qty",
+            "subtotal": "Subtotal",
+            "delivery": "Delivery",
+            "grand_total": "Grand Total",
+            "place_order": "Place Order",
+            "processing": "Processing...",
+            "fast_delivery": "Fast Delivery",
+            "safe_shopping": "Safe Shopping"
+        },
+        "toasts": {
+            "addr_success": "Address added successfully",
+            "addr_fail": "Failed to add address",
+            "select_addr": "Please select a delivery address",
+            "razorpay_fail": "Razorpay SDK failed to load. Are you online?",
+            "pay_cancel": "Payment cancelled by user",
+            "order_success": "Order placed successfully!",
+            "order_partial_fail": "Payment successful but order creation failed. Please contact support.",
+            "manual_success": "Manual order placed! Check your orders.",
+            "manual_fail": "Failed to place order. Please try again."
+        }
+    },
+    "orders": {
+        "header": {
+            "badge": "Your Journey",
+            "title": "Order History",
+            "desc": "Track your divine collections and spiritual orders from Gayatri Granthalaya."
+        },
+        "empty": {
+            "title": "No orders yet",
+            "desc": "Your spiritual journey is just beginning. Browse our collection to find your first inspiration.",
+            "cta": "Explore Books"
+        },
+        "order": {
+            "id_label": "Order ID",
+            "date_label": "Ordered On",
+            "city_label": "Delivery City",
+            "amount_label": "Total Amount",
+            "paid": "Paid Online",
+            "pay_pending": "Payment Pending",
+            "items_title": "Order Items"
+        },
+        "status": {
+            "placed": "Placed",
+            "packed": "Packed",
+            "shipped": "Shipped",
+            "delivered": "Delivered"
+        }
+    },
+    "home": {
+        "hero": {
+            "badge": "Awakening Divinity",
+            "title": "Gayatri Pariwar",
+            "subtitle": "Bhiwandi",
+            "quote": "\"Rise of Divinity in Man, Descent of Heaven on Earth\"",
+            "cta_programs": "View Programs",
+            "cta_mission": "Our Mission"
+        },
+        "highlights": {
+            "badge": "Experience Divine Wisdom",
+            "title": "Spiritual Path to Self-Transformation",
+            "darshan": {
+                "title": "Daily Darshan",
+                "desc": "Start your day with spiritual inspiration and divine daily thoughts from Param Pujya Gurudev Pt. Shriram Sharma Acharya.",
+                "cta": "Begin Journey"
+            },
+            "programs": {
+                "title": "Programs & Yagya",
+                "desc": "Join our vibrant community for Yagya, Sanskars, and group spiritual study sessions.",
+                "cta": "View Schedule"
+            },
+            "media": {
+                "title": "Photo Gallery",
+                "desc": "Relive the divine moments and vibrant energy of our recent events and celebrations.",
+                "cta": "View Gallery"
+            },
+            "resources": {
+                "title": "Resources",
+                "desc": "Access profound spiritual literature (Vangmay), mantras, and audio resources for guidance in your daily Sadhana.",
+                "cta": "View Library"
+            }
+        },
+        "founder_quote": {
+            "text": "\"We change, the era changes. We reform, the era reforms.\"",
+            "author": "Pt. Shriram Sharma Acharya",
+            "role": "Founder of All World Gayatri Pariwar"
+        }
+    },
+    "footer": {
+        "brand_desc": "A global movement dedicated to the moral and spiritual awakening of humanity. Committed to reviving the Rishi culture.",
+        "quick_access": "Quick Access",
+        "spiritual_links": "Spiritual",
+        "connect": "Connect With Us",
+        "social_desc": "Follow our social channels for live streams and daily spiritual updates.",
+        "links": {
+            "upcoming_events": "Upcoming Events",
+            "latest_news": "Latest News",
+            "daily_darshan": "Daily Darshan",
+            "literature": "Literature (Vangmay)",
+            "audio_mantras": "Audio Mantras",
+            "yagya_procedures": "Yagya Procedures"
+        },
+        "copyright": "All rights reserved.",
+        "privacy": "Privacy Policy",
+        "terms": "Terms of Service"
+    },
+    "about": {
+        "header": {
+            "badge": "Know Our Journey",
+            "title": "About the Mission",
+            "desc": "Discover the roots, vision, and the divine spiritual movement of All World Gayatri Pariwar."
+        },
+        "mission": {
+            "badge": "Tri-fold Research",
+            "title": "Our Core Mission",
+            "desc": "All World Gayatri Pariwar (AWGP) is a global movement dedicated to the moral, spiritual, and cultural awakening of humanity. Our mission is built on the profound triple foundation of reform:",
+            "atma": {
+                "title": "Self Transformation",
+                "desc": "Reform of the Self: Global transformation begins with the individual soul."
+            },
+            "parivar": {
+                "title": "Family Transformation",
+                "desc": "Reform of the Family: Building strong, value-based units for a stable society."
+            },
+            "samaj": {
+                "title": "Society Transformation",
+                "desc": "Reform of the Society: Creating a world based on mutual respect and divinity."
+            }
+        },
+        "founders": {
+            "badge": "Visionaries",
+            "title": "The Souls Behind the Movement",
+            "desc1": "The mission was founded by Yug Rishi, Param Pujya Gurudev Pt. Shriram Sharma Acharya, who envisioned a new Golden Age along with the divine presence of Vandaniya Mata Bhagwati Devi Sharma.",
+            "desc2": "They dedicated every moment of their lives to the revival of Rishi culture and the spiritual upliftment of individuals across the globe."
+        },
+        "branch": {
+            "title": "Bhiwandi Branch",
+            "quote": "\"Serving the local community through regular Yagyas, Sanskars, spiritual discourses, and social welfare activities. We strive to bring the divine message of Gayatri and Yagya to every household.\""
+        }
+    },
+    "events": {
+        "header": {
+            "badge": "Calendar of Divinity",
+            "title": "Programs & Events",
+            "desc": "Stay updated with our upcoming Yagyas, Sanskars, and community spiritual gatherings."
+        },
+        "upcoming": {
+            "title": "Upcoming Events",
+            "desc": "Planned spiritual gatherings for our community.",
+            "active_count": "Active",
+            "empty": "No upcoming events scheduled at the moment."
+        },
+        "past": {
+            "title": "Past Events",
+            "empty": "Our archive is empty."
+        },
+        "active_count": "Active",
+        "no_upcoming": "No upcoming events scheduled at the moment.",
+        "archive_empty": "Our archive is empty.",
+        "review_past": "Review Past Events",
+        "discover_join": "Learn More and Join",
+        "categories": {
+            "general": "General",
+            "yagya": "Yagya",
+            "sanskars": "Sanskars",
+            "swadhyaya": "Swadhyaya",
+            "social": "Social",
+            "youth": "Youth"
+        },
+        "card": {
+            "cta_upcoming": "Register for Event",
+            "cta_past": "View Highlights",
+            "default_type": "General"
+        },
+        "detail": {
+            "not_found_title": "Event Not Found",
+            "not_found_desc": "The event you are looking for may have concluded or been removed.",
+            "back_to_events": "View All Events",
+            "past_badge": "Past Event",
+            "register_cta": "Register for Event",
+            "calendar_cta": "Add to Calendar",
+            "concluded_msg": "This event has concluded successfully",
+            "desc_title": "Description",
+            "all_programs_link": "View all upcoming programs"
+        }
+    },
+    "spiritual": {
+        "header": {
+            "badge": "Divine Wisdom",
+            "title": "Daily Darshan",
+            "desc": "\"Receive spiritual inspiration and divine blessings every day through the profound words of Param Pujya Gurudev Pt. Shriram Sharma Acharya.\""
+        },
+        "featured": {
+            "share": "Share This Inspiration"
+        },
+        "recent": {
+            "title": "Recent Inspirations"
+        },
+        "cards": {
+            "eternal_wisdom": "Eternal Wisdom",
+            "share": "Share"
+        }
+    },
+    "news": {
+        "header": {
+            "badge": "Voice of Community",
+            "title": "Latest News",
+            "desc": "Stay informed about the latest happenings, developmental projects, and spiritual milestones at Gayatri Pariwar Bhiwandi."
+        },
+        "categories": {
+            "all": "All",
+            "general": "General",
+            "events": "Events",
+            "sadhana": "Sadhana",
+            "social": "Social",
+            "yagya": "Yagya",
+            "spiritual": "Spiritual",
+            "youth": "Youth"
+        },
+        "empty": {
+            "desc": "No news found in the \"{category}\" category.",
+            "cta": "View All News"
+        },
+        "article": {
+            "important": "Important Update",
+            "cta": "Read Full Story",
+            "author": "By Gayatri Pariwar Bhiwandi",
+            "share": "Share this Story"
+        },
+        "detail": {
+            "not_found_title": "News Story Not Found",
+            "back_to_news": "Return to News"
+        }
+    },
+    "contact": {
+        "header": {
+            "badge": "Connect With Us",
+            "title": "Contact Us",
+            "desc": "Connect with our local Bhiwandi branch for spiritual guidance, events, and community service."
+        },
+        "branch_info": {
+            "title": "Branch Information",
+            "center_label": "Local Center",
+            "center_name": "Gayatri PragyaPeeth, Bhiwandi, Maharashtra",
+            "email_label": "Email Address",
+            "phone_label": "Phone Number"
+        },
+        "hq": {
+            "title": "Shantikunj (Headquarters)",
+            "desc": "For global inquiries and spiritual retreats at our primary headquarters in Haridwar.",
+            "cta": "Visit Official AWGP Website",
+            "quote": "Let us join hands for a divine purpose.",
+            "motto_label": "Mandir Motto"
+        },
+        "email_options": {
+            "title": "Choose to Send Email",
+            "gmail": "Gmail",
+            "outlook": "Outlook",
+            "default": "Default App"
+        }
+    },
+    "resources": {
+        "header": {
+            "badge": "Divine Treasury",
+            "title": "Spiritual Resources",
+            "desc": "Access a treasury of spiritual knowledge, from Gurudev's literature to uplifting bhajans and meditative videos.",
+            "results_found": "Resources Found"
+        },
+        "tabs": {
+            "all": "All",
+            "book": "Books",
+            "audio": "Audio & Bhajans",
+            "video": "Videos"
+        },
+        "types": {
+            "book": "Book",
+            "audio": "Audio",
+            "bhajan": "Bhajan",
+            "video": "Video",
+            "picture": "Picture"
+        },
+        "empty": {
+            "desc": "No resources found in this category.",
+            "cta": "View All Resources"
+        },
+        "card": {
+            "default_desc": "Discover divine literature and media shared by the community.",
+            "cta": "Download / View"
+        }
+    },
+    "media_page": {
+        "header": {
+            "badge": "Digital Archive",
+            "title": "Photo Gallery",
+            "desc": "Relive the divine moments and vibrant energy of our recent events and celebrations."
+        },
+        "tabs": {
+            "folders": "Folders",
+            "all_photos": "All Photos"
+        },
+        "empty": "No items found in this collection.",
+        "items": "items",
+        "open_folder": "Open Folder",
+        "back_to_gallery": "Back to Gallery"
+    },
+    "legal": {
+        "badge": "Legal Documentation",
+        "privacy_title": "Privacy Policy",
+        "terms_title": "Terms of Service",
+        "last_updated": "Last Updated",
+        "contact_support": "Contact Support Team",
+        "questions_text": "Have specific questions regarding these terms?",
+        "terms": {
+            "lead": "\"We are a community dedicated to spiritual growth. These terms ensure our platform remains a sanctuary for all.\"",
+            "intro_title": "1. Agreement to Terms",
+            "intro_text": "By accessing the {brand} website, you consent to these Terms of Service. If you do not agree with any part of these terms, you should discontinue use of the site immediately.",
+            "ip_title": "2. Intellectual Property Rights",
+            "ip_text": "Our content is our offering to the world, but we ask that you respect its source:",
+            "ip_list_1_title": "Ownership:",
+            "ip_list_1_text": " All spiritual texts, logos (excluding the global Gayatri Pariwar symbol), and media created by the Bhiwandi Branch are strictly our intellectual property.",
+            "ip_list_2_title": "Permitted Use:",
+            "ip_list_2_text": " You may share our \"Daily Darshan\" images and event photos personally and on social media, provided you do not alter them or claim them as your own.",
+            "ip_list_3_title": "Prohibitions:",
+            "ip_list_3_text": " You may not sell, license, or commercialize any content found on this website.",
+            "guidelines_title": "3. Community Guidelines",
+            "guidelines_text": "When interacting with our digital channels (including email or potential future comment sections):",
+            "guidelines_list_1": "Maintain respect and purity of speech (*Vani*).",
+            "guidelines_list_2": "Do not post unsolicited advertisements or spam.",
+            "guidelines_list_3": "Avoid political or divisive discussions; our focus is purely spiritual and social upliftment.",
+            "liability_title": "4. Limitation of Liability",
+            "liability_text": "The information on this website constitutes spiritual guidance, not professional medical, legal, or financial advice. We are not liable for any decisions made based on the content provided here. Participation in events or Yagyas is voluntary.",
+            "governance_title": "5. Governance",
+            "governance_text": "These terms are governed by the laws of India. Any disputes related to the website shall be resolved amicably within the community framework whenever possible."
+        },
+        "privacy": {
+            "lead": "Your privacy is sacred to us. We operate on principles of transparency and trust.",
+            "collect_title": "1. What We Collect",
+            "collect_text": "Unlike commercial platforms, we collect minimal data:",
+            "collect_list_1_title": "No Personal Accounts:",
+            "collect_list_1_text": " You do not need to create an account to view our content. We do not store passwords.",
+            "collect_list_2_title": "Voluntary Information:",
+            "collect_list_2_text": " If you email us, we only receive the info you choose to send (e.g., your Name/Email address).",
+            "usage_title": "2. Technical Usage Data",
+            "usage_text": "To keep the site running smoothly, our servers automatically log standard technical details:",
+            "usage_list_1": "Device Type (Mobile/Desktop) to adjust layout.",
+            "usage_list_2": "Approximate Location (Country/City) to see where our devotees are visiting from.",
+            "usage_list_3": "Browser Language to serve you English, Hindi, Marathi, or Gujarati automatically.",
+            "cookies_title": "3. Cookies & Tracking",
+            "cookies_text": "We are cookie-minimalist. We use:",
+            "cookies_list_1": "ONE cookie to remember your Theme Preference (Dark/Light Mode).",
+            "cookies_list_2": "ONE cookie to remember your Language Choice.",
+            "cookies_note": "We do NOT use invasive advertising pixels or sell your data to third parties.",
+            "embedded_title": "4. Embedded Content Security",
+            "embedded_text": "This site includes embedded videos from YouTube and maps from Google. When you interact with these specifically, those companies may track your interaction according to their own privacy policies.",
+            "security_title": "5. Data Protection",
+            "security_text": "We employ HTTPS encryption to ensure that your connection to our site is secure. Any voluntary data you share is accessible only to authorized branch volunteers."
+        }
+    }
+}

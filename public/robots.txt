@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://gayatri-pariwar-bhiwandi.vercel.app/sitemap.xml
