@@ -24,7 +24,8 @@ import {
     BookOpen,
     ShoppingCart,
     MapPin,
-    BarChart3
+    BarChart3,
+    AlertTriangle
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
@@ -59,6 +60,7 @@ const navGroups: NavGroup[] = [
         suites: ['granthalaya'],
         items: [
             { name: "Dashboard", href: "/admin/analytics", icon: LayoutDashboard },
+            { name: "Low Stock Alerts", href: "/admin/books/alerts", icon: AlertTriangle },
             { name: "Granthalaya Logs", href: "/admin/books/logs", icon: History },
         ]
     },
