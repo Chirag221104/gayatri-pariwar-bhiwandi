@@ -1,23 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, BookOpen, Tag, Archive, Edit3, Trash2, FileText, Images } from "lucide-react";
+import { Archive, Edit3, FileText, Images, Package, Plus, Search, Tag, Trash2 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import AdminTable from "@/components/admin/AdminTable";
 import SectionHeader from "@/components/ui/SectionHeader";
+import { Product, PRODUCT_TYPES } from "@/lib/product-utils";
+import { generateProductLabels } from "@/lib/label-generator";
 
-interface Book {
-    id: string;
-    title: string;
-    author: string;
-    price: number;
-    category: string;
-    stockQuantity: number;
-    coverUrl?: string;
-    tags?: string[];
+interface Book extends Product {
+    title?: string; // Support legacy title
+    author?: string; // Support legacy author
+    coverUrl?: string; // Support legacy coverUrl
 }
 
 export default function BooksInventoryPage() {
@@ -25,8 +22,20 @@ export default function BooksInventoryPage() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [isDark, setIsDark] = useState(false);
+    const [selectedType, setSelectedType] = useState<string>("ALL");
     const params = useParams();
     const locale = (params?.locale as string) || "en";
+
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+    const PRODUCT_TYPE_TABS = [
+        { id: "ALL", label: "All Items", icon: Package },
+        { id: "BK", label: "Books", icon: Search },
+        { id: "SM", label: "Samagri", icon: Tag },
+        { id: "GB", label: "Gobar", icon: Tag },
+        { id: "VS", label: "Vastra", icon: Tag },
+        { id: "IN", label: "Incense", icon: Tag },
+    ];
 
     useEffect(() => {
         const checkDark = () => {
@@ -62,29 +71,47 @@ export default function BooksInventoryPage() {
         return () => unsubscribe();
     }, []);
 
-    const filteredBooks = books.filter(book =>
-        book.title.toLowerCase().includes(search.toLowerCase()) ||
-        book.author.toLowerCase().includes(search.toLowerCase()) ||
-        book.category.toLowerCase().includes(search.toLowerCase())
-    );
+    const filteredBooks = books.filter(book => {
+        const matchesSearch = (book.productCode || "").toLowerCase().includes(search.toLowerCase()) ||
+            (book.name || book.title || "").toLowerCase().includes(search.toLowerCase()) ||
+            (book.author || book.metadata?.author || "").toLowerCase().includes(search.toLowerCase()) ||
+            book.category.toLowerCase().includes(search.toLowerCase());
+
+        const matchesType = selectedType === "ALL" || book.type === selectedType;
+
+        return matchesSearch && matchesType;
+    });
+
+    const handlePrintLabels = () => {
+        const productsToPrint = selectedIds.size > 0
+            ? books.filter(b => selectedIds.has(b.id))
+            : filteredBooks;
+
+        if (productsToPrint.length > 0) {
+            generateProductLabels(productsToPrint);
+        }
+    };
 
     const columns = [
         {
-            header: "Book Details",
+            header: "Product Details",
             accessor: (item: Book) => (
                 <div className="flex items-center gap-4">
                     <div className={`w-12 h-16 rounded-lg overflow-hidden shrink-0 border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'}`}>
-                        {item.coverUrl ? (
-                            <img src={item.coverUrl} alt="" className="w-full h-full object-cover" />
+                        {item.imageUrl || item.coverUrl ? (
+                            <img src={item.imageUrl || item.coverUrl} alt="" className="w-full h-full object-cover" />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                                <BookOpen className="w-6 h-6 opacity-10" />
+                                <Package className="w-6 h-6 opacity-10" />
                             </div>
                         )}
                     </div>
                     <div className="flex flex-col min-w-0">
-                        <span className={`font-semibold truncate max-w-[250px] ${isDark ? 'text-white' : 'text-slate-900'}`}>{item.title}</span>
-                        <span className="text-xs text-slate-500">{item.author}</span>
+                        <span className={`font-semibold truncate max-w-[250px] ${isDark ? 'text-white' : 'text-slate-900'}`}>{item.name || item.title}</span>
+                        <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] font-mono bg-slate-500/10 px-1 rounded text-slate-500">{item.productCode || 'NO-CODE'}</span>
+                            <span className="text-[10px] uppercase font-bold text-slate-400">{item.type || 'BK'}</span>
+                        </div>
                     </div>
                 </div>
             )
@@ -120,11 +147,24 @@ export default function BooksInventoryPage() {
     return (
         <div className="space-y-6 flex flex-col h-[calc(100vh-8rem)]">
             <SectionHeader
-                icon={BookOpen}
-                title="Books Inventory"
-                subtitle="Manage your spiritual literature collection"
+                icon={Package}
+                title="Granthalaya Inventory"
+                subtitle="Universal product management & literature collection"
                 actions={
                     <div className="flex items-center gap-3">
+                        <button
+                            onClick={handlePrintLabels}
+                            disabled={filteredBooks.length === 0}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all border ${selectedIds.size > 0
+                                ? 'bg-orange-500 border-orange-600 text-white shadow-lg shadow-orange-500/20'
+                                : isDark
+                                    ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm'
+                                }`}
+                        >
+                            <Tag className={`w-5 h-5 ${selectedIds.size > 0 ? 'text-white' : 'text-orange-500'}`} />
+                            {selectedIds.size > 0 ? `Print Labels (${selectedIds.size})` : 'Labels (Bulk)'}
+                        </button>
                         <Link
                             href={`/${locale}/admin/books/image-sync`}
                             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all border ${isDark
@@ -150,11 +190,29 @@ export default function BooksInventoryPage() {
                             className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-orange-500/20 active:scale-95 focus:outline-none focus:ring-2 focus:ring-orange-500/50"
                         >
                             <Plus className="w-5 h-5" />
-                            Add Book
+                            Add Product
                         </Link>
                     </div>
                 }
             />
+
+            <div className={`flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide ${isDark ? 'border-b border-slate-700' : 'border-b border-slate-100'}`}>
+                {PRODUCT_TYPE_TABS.map((tab) => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setSelectedType(tab.id)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${selectedType === tab.id
+                            ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                            : isDark
+                                ? 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                                : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'
+                            }`}
+                    >
+                        <tab.icon className="w-3.5 h-3.5" />
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
 
             <div className="flex-1 min-h-0">
                 <AdminTable
@@ -169,6 +227,9 @@ export default function BooksInventoryPage() {
                     onRowClick={(item) => {
                         window.location.href = `/${locale}/admin/books/${item.id}`;
                     }}
+                    selectable={true}
+                    selectedIds={selectedIds}
+                    onSelectionChange={setSelectedIds}
                 />
             </div>
         </div>

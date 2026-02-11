@@ -16,31 +16,39 @@ import {
     IndianRupee,
     User,
     CheckCircle2,
-    QrCode
+    QrCode,
+    History,
+    Check
 } from "lucide-react";
 import ImageUpload from "@/components/admin/ImageUpload";
 import QRCode from "react-qr-code";
+import { db } from "@/lib/firebase";
+import { collection, query, orderBy, getDocs } from "firebase/firestore";
 
-interface Book {
-    id: string;
-    title: string;
-    author: string;
-    price: number;
-    category: string;
-    stockQuantity: number;
-    description: string;
-    coverUrl?: string;
-    tags: string[];
-    isActive: boolean;
-    isbn?: string;
-}
+import {
+    generateProductCode,
+    PRODUCT_TYPES,
+    ProductTypeCode,
+    Product,
+    formatProductQR
+} from "@/lib/product-utils";
+import { generateProductLabels } from "@/lib/label-generator";
 
-interface BookFormProps {
-    initialData?: Partial<Book>;
-    onSave: (data: Partial<Book>) => Promise<void>;
+interface ProductFormProps {
+    initialData?: Partial<Product>;
+    onSave: (data: Partial<Product>) => Promise<void>;
     onCancel: () => void;
     isSaving: boolean;
 }
+
+const PRODUCT_TYPE_OPTIONS = [
+    { label: 'Book', value: PRODUCT_TYPES.BOOK },
+    { label: 'Hawan Samagri', value: PRODUCT_TYPES.SAMAGRI },
+    { label: 'Gobar Product', value: PRODUCT_TYPES.GOBAR },
+    { label: 'Vastra', value: PRODUCT_TYPES.VASTRA },
+    { label: 'Incense', value: PRODUCT_TYPES.INCENSE },
+    { label: 'Other', value: PRODUCT_TYPES.OTHER },
+];
 
 const CATEGORIES = [
     'General',
@@ -53,18 +61,23 @@ const CATEGORIES = [
     'Youth'
 ];
 
-export default function BookForm({ initialData, onSave, onCancel, isSaving }: BookFormProps) {
-    const [title, setTitle] = useState(initialData?.title || "");
-    const [author, setAuthor] = useState(initialData?.author || "");
+export default function ProductForm({ initialData, onSave, onCancel, isSaving }: ProductFormProps) {
+    const data = initialData as any;
+    const [categories, setCategories] = useState<string[]>([]);
+    const [name, setName] = useState(data?.name || data?.title || "");
+    const [type, setType] = useState<ProductTypeCode>(initialData?.type || PRODUCT_TYPES.BOOK);
+    const [productCode, setProductCode] = useState(initialData?.productCode || "");
+    const [variantInfo, setVariantInfo] = useState(initialData?.variantInfo || "");
+    const [author, setAuthor] = useState(initialData?.metadata?.author || data?.author || "");
     const [price, setPrice] = useState(initialData?.price || 0);
-    const [category, setCategory] = useState(initialData?.category || CATEGORIES[0]);
+    const [category, setCategory] = useState(data?.category || "");
     const [stockQuantity, setStockQuantity] = useState(initialData?.stockQuantity || 0);
     const [description, setDescription] = useState(initialData?.description || "");
-    const [coverUrl, setCoverUrl] = useState(initialData?.coverUrl || "");
+    const [coverUrl, setCoverUrl] = useState(initialData?.imageUrl || data?.coverUrl || "");
     const [tags, setTags] = useState<string[]>(initialData?.tags || []);
     const [newTag, setNewTag] = useState("");
     const [isActive, setIsActive] = useState(initialData?.isActive ?? true);
-    const [isbn, setIsbn] = useState(initialData?.isbn || "");
+    const [rackId, setRackId] = useState(initialData?.rackId || "");
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -73,6 +86,24 @@ export default function BookForm({ initialData, onSave, onCancel, isSaving }: Bo
     const [isDark, setIsDark] = useState(false);
 
     useWarnUnsavedChanges(isDirty);
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const q = query(collection(db, "granthalaya_app/inventory/categories"), orderBy("order", "asc"), orderBy("name", "asc"));
+                const querySnapshot = await getDocs(q);
+                const fetched = querySnapshot.docs.map(doc => doc.data().name);
+                setCategories(fetched);
+                if (!category && fetched.length > 0) {
+                    setCategory(fetched[0]);
+                }
+            } catch (error) {
+                console.error("Error fetching categories:", error);
+                setCategories(['General', 'Spiritual', 'Yoga', 'Philosophy', 'Science', 'Meditation', 'Ayurveda', 'Youth']);
+            }
+        };
+        fetchCategories();
+    }, []);
 
     useEffect(() => {
         const checkDark = () => {
@@ -93,17 +124,29 @@ export default function BookForm({ initialData, onSave, onCancel, isSaving }: Bo
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsDirty(false);
+
+        // Final code generation if missing
+        let finalCode = productCode;
+        if (!finalCode) {
+            finalCode = generateProductCode(type, name, Date.now().toString().slice(-4));
+        }
+
         await onSave({
-            title,
-            author,
+            name,
+            type,
+            productCode: finalCode,
+            variantInfo,
             price: Number(price),
-            category,
+            category: category as any,
             stockQuantity: Number(stockQuantity),
             description,
-            coverUrl,
+            imageUrl: coverUrl,
             tags,
             isActive,
-            isbn
+            rackId,
+            metadata: {
+                author,
+            }
         });
     };
 
@@ -196,30 +239,44 @@ export default function BookForm({ initialData, onSave, onCancel, isSaving }: Bo
                 {/* Main Content */}
                 <div className="lg:col-span-2 space-y-6">
                     <div className={cardClasses}>
-                        <div className="space-y-2">
-                            <label className={labelClasses}>Book Title *</label>
-                            <input
-                                type="text"
-                                value={title}
-                                onChange={(e) => { setTitle(e.target.value); setIsDirty(true); }}
-                                required
-                                className={`${inputClasses} text-lg font-bold`}
-                                placeholder="Enter book title..."
-                            />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className={labelClasses}>Product Name *</label>
+                                <input
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) => { setName(e.target.value); setIsDirty(true); }}
+                                    required
+                                    className={`${inputClasses} text-lg font-bold`}
+                                    placeholder="Enter product name..."
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className={labelClasses}>Product Type *</label>
+                                <select
+                                    value={type}
+                                    onChange={(e) => { setType(e.target.value as any); setIsDirty(true); }}
+                                    className={inputClasses}
+                                >
+                                    {PRODUCT_TYPE_OPTIONS.map(opt => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className={labelClasses}>Author *</label>
+                                <label className={labelClasses}>{type === 'BK' ? 'Author *' : 'Manufacturer/Source'}</label>
                                 <div className="relative">
                                     <User className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
                                     <input
                                         type="text"
                                         value={author}
                                         onChange={(e) => { setAuthor(e.target.value); setIsDirty(true); }}
-                                        required
+                                        required={type === 'BK'}
                                         className={`${inputClasses} pl-10`}
-                                        placeholder="Author Name"
+                                        placeholder={type === 'BK' ? "Author Name" : "Optional source/mfg"}
                                     />
                                 </div>
                             </div>
@@ -240,28 +297,40 @@ export default function BookForm({ initialData, onSave, onCancel, isSaving }: Bo
                             </div>
                         </div>
 
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className={labelClasses}>Variant Label (Display Only)</label>
+                                <input
+                                    type="text"
+                                    value={variantInfo}
+                                    onChange={(e) => { setVariantInfo(e.target.value); setIsDirty(true); }}
+                                    className={inputClasses}
+                                    placeholder="e.g. 500g, Pack of 10"
+                                />
+                                <p className="text-[10px] text-slate-500 px-1 italic">Shown on printable labels only</p>
+                            </div>
+                            <div className="space-y-2">
+                                <label className={labelClasses}>Product Code (Immutable)</label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={productCode || "Will be generated on save"}
+                                        disabled
+                                        className={`${inputClasses} font-mono text-[11px] bg-slate-500/5`}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="space-y-2">
                             <label className={labelClasses}>Description</label>
                             <textarea
                                 value={description}
                                 onChange={(e) => { setDescription(e.target.value); setIsDirty(true); }}
-                                rows={8}
+                                rows={6}
                                 className={`${inputClasses} resize-none leading-relaxed`}
-                                placeholder="Write a brief description of the book..."
+                                placeholder="Describe the product details..."
                             />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className={labelClasses}>ISBN *</label>
-                            <input
-                                type="text"
-                                value={isbn}
-                                onChange={(e) => { setIsbn(e.target.value); setIsDirty(true); }}
-                                className={inputClasses}
-                                placeholder="978-3-16-148410-0"
-                                required
-                            />
-                            <p className="text-[10px] text-slate-500 px-1">International Standard Book Number</p>
                         </div>
                     </div>
 
@@ -273,19 +342,24 @@ export default function BookForm({ initialData, onSave, onCancel, isSaving }: Bo
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className={labelClasses}>Category</label>
+                                <label className={labelClasses}>Category (Single Choice)</label>
                                 <select
                                     value={category}
                                     onChange={(e) => { setCategory(e.target.value); setIsDirty(true); }}
                                     className={inputClasses}
+                                    required
                                 >
-                                    {CATEGORIES.map(cat => (
+                                    <option value="" disabled>Select a category</option>
+                                    {categories.map((cat) => (
                                         <option key={cat} value={cat}>{cat}</option>
                                     ))}
                                 </select>
+                                <p className="text-[10px] text-slate-500 px-1 leading-normal italic">
+                                    Used for <b>Browsing mode</b> (e.g., "Samagri {'>'} Hawan"). A product belongs to exactly one category.
+                                </p>
                             </div>
                             <div className="space-y-2">
-                                <label className={labelClasses}>Add Tags</label>
+                                <label className={labelClasses}>Discovery Tags (Multiple allowed)</label>
                                 <div className="flex gap-2">
                                     <input
                                         type="text"
@@ -293,7 +367,7 @@ export default function BookForm({ initialData, onSave, onCancel, isSaving }: Bo
                                         onChange={(e) => setNewTag(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
                                         className={inputClasses}
-                                        placeholder="Type and press enter"
+                                        placeholder="e.g. Trending, Featured"
                                     />
                                     <button
                                         type="button"
@@ -304,7 +378,7 @@ export default function BookForm({ initialData, onSave, onCancel, isSaving }: Bo
                                     </button>
                                 </div>
                                 <div className="flex flex-wrap gap-2 mt-3">
-                                    {tags.map(tag => (
+                                    {tags.map((tag) => (
                                         <span
                                             key={tag}
                                             className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${isDark ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : 'bg-orange-50 text-orange-600 border border-orange-100'}`}
@@ -314,6 +388,9 @@ export default function BookForm({ initialData, onSave, onCancel, isSaving }: Bo
                                         </span>
                                     ))}
                                 </div>
+                                <p className="text-[10px] text-slate-500 px-1 leading-normal italic mt-2">
+                                    Used for <b>Home Discovery sections</b>. Products can have multiple tags.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -341,6 +418,17 @@ export default function BookForm({ initialData, onSave, onCancel, isSaving }: Bo
                                 />
                             </div>
 
+                            <div className="space-y-2">
+                                <label className={labelClasses}>Rack ID (Location)</label>
+                                <input
+                                    type="text"
+                                    value={rackId}
+                                    onChange={(e) => { setRackId(e.target.value); setIsDirty(true); }}
+                                    className={inputClasses}
+                                    placeholder="e.g. RACK-A3"
+                                />
+                            </div>
+
                             <button
                                 type="button"
                                 onClick={() => { setIsActive(!isActive); setIsDirty(true); }}
@@ -363,7 +451,7 @@ export default function BookForm({ initialData, onSave, onCancel, isSaving }: Bo
                     <div className={cardClasses}>
                         <h2 className="text-sm font-bold text-orange-500 uppercase tracking-widest flex items-center gap-2">
                             <ImageIcon className="w-4 h-4" />
-                            Book Cover
+                            Product Image
                         </h2>
 
                         <div className="space-y-4">
@@ -433,17 +521,47 @@ export default function BookForm({ initialData, onSave, onCancel, isSaving }: Bo
                         </div>
                     </div>
 
-                    {isbn && (
+                    {productCode && (
                         <div className={cardClasses}>
                             <h2 className="text-sm font-bold text-orange-500 uppercase tracking-widest flex items-center gap-2">
                                 <QrCode className="w-4 h-4" />
-                                QR Code
+                                Product Identity (QR)
                             </h2>
                             <div className="space-y-4">
                                 <div className={`p-6 rounded-2xl border-2 border-dashed flex items-center justify-center ${isDark ? 'bg-slate-800/20 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-                                    <QRCode value={isbn} size={180} />
+                                    <QRCode value={formatProductQR(productCode)} size={180} />
                                 </div>
-                                <p className="text-[10px] text-slate-500 text-center px-1">Generated from ISBN - Scan to verify book identity</p>
+                                <p className="text-[10px] text-slate-500 text-center px-1 font-mono">{productCode}</p>
+                                <p className="text-[10px] text-slate-500 text-center px-1">Encoded for secure verification</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {(initialData?.createdAt || initialData?.updatedAt) && (
+                        <div className={cardClasses}>
+                            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                <History className="w-4 h-4" />
+                                Audit Trail
+                            </h2>
+                            <div className="space-y-2 text-[10px] font-bold uppercase tracking-tight text-slate-500">
+                                {initialData.createdAt && (
+                                    <div className="flex justify-between">
+                                        <span>Created:</span>
+                                        <span>{new Date(initialData.createdAt.seconds * 1000).toLocaleDateString()}</span>
+                                    </div>
+                                )}
+                                {initialData.updatedAt && (
+                                    <div className="flex justify-between">
+                                        <span>Last Sync:</span>
+                                        <span>{new Date(initialData.updatedAt.seconds * 1000).toLocaleDateString()}</span>
+                                    </div>
+                                )}
+                                {initialData.createdBy && (
+                                    <div className="flex justify-between truncate">
+                                        <span>Author:</span>
+                                        <span className="truncate ml-2">{initialData.createdBy}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -456,21 +574,35 @@ export default function BookForm({ initialData, onSave, onCancel, isSaving }: Bo
                     ? 'bg-[#0f172a]/80 border-white/10'
                     : 'bg-white/90 border-slate-200'
                     }`}>
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        disabled={isSaving}
-                        className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all ${isDark
-                            ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                            }`}
-                    >
-                        Cancel
-                    </button>
+                    <div className="flex-1 flex flex-col gap-2">
+                        <button
+                            type="button"
+                            onClick={onCancel}
+                            disabled={isSaving}
+                            className={`w-full px-6 py-3 rounded-xl font-bold transition-all ${isDark
+                                ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                                }`}
+                        >
+                            Cancel
+                        </button>
+                        {initialData?.productCode && (
+                            <button
+                                type="button"
+                                onClick={() => generateProductLabels([initialData as Product])}
+                                className={`w-full px-6 py-2 rounded-xl text-xs font-bold transition-all border ${isDark
+                                    ? 'bg-slate-800/50 border-slate-700 text-slate-400 hover:bg-slate-700'
+                                    : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                                    }`}
+                            >
+                                Download Label
+                            </button>
+                        )}
+                    </div>
                     <button
                         type="submit"
                         disabled={isSaving}
-                        className="flex-[2] px-6 py-3 rounded-xl bg-gradient-to-r from-orange-600 to-orange-400 hover:from-orange-500 hover:to-orange-300 text-white font-bold transition-all shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2"
+                        className="flex-[2] px-6 py-6 rounded-xl bg-gradient-to-r from-orange-600 to-orange-400 hover:from-orange-500 hover:to-orange-300 text-white font-bold transition-all shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2"
                     >
                         {isSaving ? (
                             <>
@@ -480,7 +612,7 @@ export default function BookForm({ initialData, onSave, onCancel, isSaving }: Bo
                         ) : (
                             <>
                                 <Save className="w-5 h-5" />
-                                {initialData?.id ? 'Update Book' : 'Add to Inventory'}
+                                {initialData?.id ? 'Update Product' : 'Add to Inventory'}
                             </>
                         )}
                     </button>

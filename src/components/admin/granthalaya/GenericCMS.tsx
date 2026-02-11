@@ -1,15 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Tag, Archive, Trash2, Save, LucideIcon } from "lucide-react";
+import { Plus, Tag, Archive, Trash2, Save, LucideIcon, GripVertical } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, doc, setDoc, deleteDoc, writeBatch, serverTimestamp } from "firebase/firestore";
 import { useToast } from "@/components/ui/Toast";
 import { logAdminAction } from "@/lib/admin-logger";
+import { Reorder } from "framer-motion";
 
 interface CMSItem {
     id: string;
     name: string;
+    order?: number;
+    typeCode?: string;
 }
 
 interface GenericCMSProps {
@@ -19,15 +22,26 @@ interface GenericCMSProps {
     icon: LucideIcon;
     placeholder: string;
     typeLabel: string; // e.g. "Section" or "Tag"
+    defaultTypeCode?: string; // Optional: default type for new items
 }
 
-export default function GenericCMS({ collectionPath, title, subtitle, icon: Icon, placeholder, typeLabel }: GenericCMSProps) {
+export default function GenericCMS({ collectionPath, title, subtitle, icon: Icon, placeholder, typeLabel, defaultTypeCode }: GenericCMSProps) {
     const [items, setItems] = useState<CMSItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [newItem, setNewItem] = useState("");
+    const [selectedType, setSelectedType] = useState(defaultTypeCode || "");
     const [isSaving, setIsSaving] = useState(false);
     const [isDark, setIsDark] = useState(false);
     const { showToast } = useToast();
+
+    const PRODUCT_TYPES = [
+        { code: "BOOK", label: "Book" },
+        { code: "SAMAGRI", label: "Hawan Samagri" },
+        { code: "GOBAR", label: "Gobar Products" },
+        { code: "VASTRA", label: "Vastra" },
+        { code: "INCENSE", label: "Incense / Dhoop" },
+        { code: "OTHER", label: "Other" }
+    ];
 
     useEffect(() => {
         const checkDark = () => {
@@ -42,6 +56,7 @@ export default function GenericCMS({ collectionPath, title, subtitle, icon: Icon
         const pathParts = collectionPath.split('/');
         const q = query(
             collection(db, pathParts[0], ...pathParts.slice(1)),
+            orderBy("order", "asc"),
             orderBy("name", "asc")
         );
 
@@ -54,7 +69,15 @@ export default function GenericCMS({ collectionPath, title, subtitle, icon: Icon
             setLoading(false);
         }, (error) => {
             console.error(`Error fetching ${typeLabel}:`, error);
-            setLoading(false);
+            // Fallback for missing order field
+            const fallbackQ = query(
+                collection(db, pathParts[0], ...pathParts.slice(1)),
+                orderBy("name", "asc")
+            );
+            return onSnapshot(fallbackQ, (s) => {
+                setItems(s.docs.map(d => ({ id: d.id, ...d.data() })) as CMSItem[]);
+                setLoading(false);
+            });
         });
 
         return () => unsubscribe();
@@ -70,17 +93,24 @@ export default function GenericCMS({ collectionPath, title, subtitle, icon: Icon
             const pathParts = collectionPath.split('/');
             const docRef = doc(db, pathParts[0], ...pathParts.slice(1), id);
 
-            await setDoc(docRef, {
+            const data: any = {
                 name: newItem.trim(),
+                order: items.length, // Add at end
                 createdAt: serverTimestamp()
-            });
+            };
+
+            if (selectedType) {
+                data.typeCode = selectedType;
+            }
+
+            await setDoc(docRef, data);
 
             await logAdminAction({
                 action: "CREATE",
                 collectionName: collectionPath,
                 documentId: id,
-                details: `Created ${typeLabel}: ${newItem.trim()}`,
-                newData: { name: newItem.trim() }
+                details: `Created ${typeLabel}: ${newItem.trim()} ${selectedType ? `(Type: ${selectedType})` : ""}`,
+                newData: data
             });
 
             setNewItem("");
@@ -90,6 +120,26 @@ export default function GenericCMS({ collectionPath, title, subtitle, icon: Icon
             showToast(`Failed to add ${typeLabel}`, "error");
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleReorder = async (newOrder: CMSItem[]) => {
+        setItems(newOrder);
+
+        // Persist order in background
+        try {
+            const batch = writeBatch(db);
+            const pathParts = collectionPath.split('/');
+
+            newOrder.forEach((item, index) => {
+                const docRef = doc(db, pathParts[0], ...pathParts.slice(1), item.id);
+                batch.update(docRef, { order: index });
+            });
+
+            await batch.commit();
+        } catch (error) {
+            console.error(`Error updating order for ${typeLabel}:`, error);
+            showToast("Failed to save new order", "error");
         }
     };
 
@@ -141,15 +191,35 @@ export default function GenericCMS({ collectionPath, title, subtitle, icon: Icon
                         New {typeLabel}
                     </h3>
                     <form onSubmit={handleAddItem} className="space-y-4">
-                        <div className="space-y-2">
-                            <input
-                                type="text"
-                                value={newItem}
-                                onChange={(e) => setNewItem(e.target.value)}
-                                className={`w-full ${inputClasses}`}
-                                placeholder={placeholder}
-                                required
-                            />
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Name</label>
+                                <input
+                                    type="text"
+                                    value={newItem}
+                                    onChange={(e) => setNewItem(e.target.value)}
+                                    className={`w-full ${inputClasses}`}
+                                    placeholder={placeholder}
+                                    required
+                                />
+                            </div>
+
+                            {typeLabel.toLowerCase() === "category" && (
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Product Type (Optional)</label>
+                                    <select
+                                        value={selectedType}
+                                        onChange={(e) => setSelectedType(e.target.value)}
+                                        className={`w-full ${inputClasses}`}
+                                    >
+                                        <option value="">Global (All Types)</option>
+                                        {PRODUCT_TYPES.map(type => (
+                                            <option key={type.code} value={type.code}>{type.label}</option>
+                                        ))}
+                                    </select>
+                                    <p className="text-[9px] text-slate-500 pl-1 italic">Limits category to specific browsing screens.</p>
+                                </div>
+                            )}
                         </div>
                         <button
                             type="submit"
@@ -159,29 +229,43 @@ export default function GenericCMS({ collectionPath, title, subtitle, icon: Icon
                             {isSaving ? "Saving..." : `Create ${typeLabel}`}
                             {!isSaving && <Save className="w-4 h-4" />}
                         </button>
+                        <p className="text-[10px] text-slate-500 text-center italic">Drag items in the list to reorder them.</p>
                     </form>
                 </div>
 
                 {/* List */}
                 <div className="lg:col-span-2">
                     <div className={`p-8 rounded-[2rem] border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {loading ? (
-                                [1, 2, 3, 4].map(i => (
+                        {loading ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {[1, 2, 3, 4].map(i => (
                                     <div key={i} className={`h-16 rounded-xl animate-pulse ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`}></div>
-                                ))
-                            ) : items.length > 0 ? (
-                                items.map(item => (
-                                    <div
+                                ))}
+                            </div>
+                        ) : items.length > 0 ? (
+                            <Reorder.Group axis="y" values={items} onReorder={handleReorder} className="space-y-3">
+                                {items.map(item => (
+                                    <Reorder.Item
                                         key={item.id}
-                                        className={`group flex items-center justify-between p-4 rounded-xl border transition-all ${isDark ? 'bg-slate-800/50 border-slate-700/50 hover:bg-slate-800 hover:border-slate-700' : 'bg-slate-50 border-slate-100 hover:bg-white hover:border-slate-200 hover:shadow-sm'}`}
+                                        value={item}
+                                        className={`group flex items-center justify-between p-4 rounded-xl border transition-all cursor-grab active:cursor-grabbing ${isDark ? 'bg-slate-800/50 border-slate-700/50 hover:bg-slate-800 hover:border-slate-700' : 'bg-slate-50 border-slate-100 hover:bg-white hover:border-slate-200 hover:shadow-sm'}`}
                                     >
                                         <div className="flex items-center gap-3">
+                                            <div className="text-slate-400 group-hover:text-orange-500">
+                                                <GripVertical className="w-4 h-4" />
+                                            </div>
                                             <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDark ? 'bg-slate-700' : 'bg-white shadow-sm'}`}>
                                                 <Icon className="w-4 h-4 text-orange-500" />
                                             </div>
                                             <div className="flex flex-col">
-                                                <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{item.name}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{item.name}</span>
+                                                    {item.typeCode && (
+                                                        <span className="px-1.5 py-0.5 rounded shadow-sm text-[8px] font-bold bg-orange-500 text-white uppercase tracking-tighter">
+                                                            {PRODUCT_TYPES.find(t => t.code === item.typeCode)?.label || item.typeCode}
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <span className="text-[10px] text-slate-500 uppercase font-medium">ID: {item.id}</span>
                                             </div>
                                         </div>
@@ -193,15 +277,15 @@ export default function GenericCMS({ collectionPath, title, subtitle, icon: Icon
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
                                         </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="col-span-full py-12 text-center">
-                                    <Archive className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                                    <p className="text-slate-400 text-sm">No {typeLabel.toLowerCase()}s found.</p>
-                                </div>
-                            )}
-                        </div>
+                                    </Reorder.Item>
+                                ))}
+                            </Reorder.Group>
+                        ) : (
+                            <div className="py-12 text-center">
+                                <Archive className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                                <p className="text-slate-400 text-sm">No {typeLabel.toLowerCase()}s found.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

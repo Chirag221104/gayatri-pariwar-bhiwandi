@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/Toast";
 import CategoryCMSPage from "../cms/page";
 import { logAdminAction } from "@/lib/admin-logger";
 import GenericCMS from "@/components/admin/granthalaya/GenericCMS";
+import ProductMigrationTool from "@/components/admin/granthalaya/ProductMigrationTool";
 
 type ConfigTab = "taxonomy" | "sections" | "tags" | "delivery" | "inventory";
 
@@ -140,7 +141,21 @@ export default function GranthalayaConfigPage() {
 
             <div className="mt-8">
                 {activeTab === "taxonomy" && (
-                    <CategoryCMSPage />
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center bg-orange-50 dark:bg-orange-500/5 p-4 rounded-2xl border border-orange-100 dark:border-orange-500/10">
+                            <div>
+                                <h3 className="text-sm font-bold text-orange-600 dark:text-orange-500">Quick Start: Spiritual Categories</h3>
+                                <p className="text-[10px] text-orange-600/70 dark:text-orange-500/70 font-medium">Click to automatically populate Hawan Samagri, Gobar, Vastra, and Incense categories.</p>
+                            </div>
+                            <a
+                                href="/admin/books/config/seed"
+                                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all shadow-md shadow-orange-500/20"
+                            >
+                                Run Seeder
+                            </a>
+                        </div>
+                        <CategoryCMSPage />
+                    </div>
                 )}
 
                 {activeTab === "sections" && (
@@ -197,23 +212,30 @@ export default function GranthalayaConfigPage() {
                 )}
 
                 {activeTab === "inventory" && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
-                            <h3 className="font-bold mb-6 flex items-center gap-2 text-purple-500">
-                                <ListFilter className="w-5 h-5" />
-                                Inventory Thresholds
-                            </h3>
-                            <div className="space-y-6">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Low Stock Alert Level</label>
-                                    <input
-                                        type="number"
-                                        value={config.lowStockThreshold}
-                                        onChange={(e) => setConfig({ ...config, lowStockThreshold: Number(e.target.value) })}
-                                        className={`w-full ${inputClasses}`}
-                                    />
+                    <div className="space-y-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className={`p-8 rounded-[2.5rem] border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
+                                <h3 className="font-bold mb-6 flex items-center gap-2 text-purple-500">
+                                    <ListFilter className="w-5 h-5" />
+                                    Inventory Thresholds
+                                </h3>
+                                <div className="space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Low Stock Alert Level</label>
+                                        <input
+                                            type="number"
+                                            value={config.lowStockThreshold}
+                                            onChange={(e) => setConfig({ ...config, lowStockThreshold: Number(e.target.value) })}
+                                            className={`w-full ${inputClasses}`}
+                                        />
+                                    </div>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Migration Tool */}
+                        <div className="max-w-2xl">
+                            <ProductMigrationTool />
                         </div>
                     </div>
                 )}

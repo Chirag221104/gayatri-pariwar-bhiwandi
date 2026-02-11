@@ -25,7 +25,8 @@ import {
     ShoppingCart,
     MapPin,
     BarChart3,
-    AlertTriangle
+    AlertTriangle,
+    Printer,
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
@@ -89,7 +90,9 @@ const navGroups: NavGroup[] = [
         suites: ['granthalaya'],
         items: [
             { name: "Inventory", href: "/admin/books", icon: BookOpen },
-            { name: "Fulfillment", href: "/admin/books/orders", icon: ShoppingCart },
+            { name: "Storage Racks", href: "/admin/racks", icon: MapPin },
+            { name: "Label Printing", href: "/admin/books/labels", icon: Printer },
+            { name: "Orders", href: "/admin/books/orders", icon: ShoppingCart },
             { name: "Advanced Config", href: "/admin/books/config", icon: Settings },
         ]
     },
@@ -115,7 +118,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     // Auto-switch suite based on URL
     useEffect(() => {
-        if (pathname.includes("/admin/books") || pathname.includes("/admin/analytics") || pathname.includes("/admin/users")) {
+        if (pathname.includes("/admin/books") || pathname.includes("/admin/analytics") || pathname.includes("/admin/users") || pathname.includes("/admin/racks") || pathname.includes("/admin/orders")) {
             setActiveSuite('granthalaya');
         } else if (pathname.includes("/admin/dashboard") || pathname.includes("/admin/logs")) {
             // Keep current suite for core pages or default to first visit

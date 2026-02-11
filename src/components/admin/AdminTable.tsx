@@ -30,8 +30,15 @@ export default function AdminTable<T extends { id: string }>({
     emptySubtext = "Items will appear here when they are added.",
     searchPlaceholder = "Search...",
     searchValue,
-    onSearchChange
-}: AdminTableProps<T>) {
+    onSearchChange,
+    selectable = false,
+    selectedIds,
+    onSelectionChange
+}: AdminTableProps<T> & {
+    selectable?: boolean;
+    selectedIds?: Set<string>;
+    onSelectionChange?: (ids: Set<string>) => void;
+}) {
     const [isDark, setIsDark] = useState(false);
 
     useEffect(() => {
@@ -89,6 +96,22 @@ export default function AdminTable<T extends { id: string }>({
                 <table className="w-full text-left border-collapse min-w-[600px]">
                     <thead className="sticky top-0 z-10">
                         <tr className={isDark ? 'bg-slate-800' : 'bg-slate-50'}>
+                            {selectable && (
+                                <th className={`px-6 py-3 w-10 border-b ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
+                                    <input
+                                        type="checkbox"
+                                        checked={data.length > 0 && selectedIds?.size === data.length}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                onSelectionChange?.(new Set(data.map(d => d.id)));
+                                            } else {
+                                                onSelectionChange?.(new Set());
+                                            }
+                                        }}
+                                        className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                                    />
+                                </th>
+                            )}
                             {columns.map((col, idx) => (
                                 <th
                                     key={idx}
@@ -108,6 +131,7 @@ export default function AdminTable<T extends { id: string }>({
                             [1, 2, 3, 4, 5].map((i) => (
                                 <tr key={i} className={`animate-pulse border-b ${isDark ? 'border-slate-700/50' : 'border-slate-100'
                                     }`}>
+                                    {selectable && <td className="px-6 py-4"></td>}
                                     {columns.map((_, idx) => (
                                         <td key={idx} className="px-6 py-4">
                                             <div className={`h-4 rounded w-3/4 ${isDark ? 'bg-slate-700' : 'bg-slate-200'
@@ -132,6 +156,24 @@ export default function AdminTable<T extends { id: string }>({
                                     tabIndex={0}
                                     onKeyDown={(e) => e.key === 'Enter' && onRowClick?.(item)}
                                 >
+                                    {selectable && (
+                                        <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedIds?.has(item.id)}
+                                                onChange={(e) => {
+                                                    const newSet = new Set(selectedIds);
+                                                    if (e.target.checked) {
+                                                        newSet.add(item.id);
+                                                    } else {
+                                                        newSet.delete(item.id);
+                                                    }
+                                                    onSelectionChange?.(newSet);
+                                                }}
+                                                className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                                            />
+                                        </td>
+                                    )}
                                     {columns.map((col, idx) => (
                                         <td key={idx} className={`px-6 py-4 text-sm ${isDark ? 'text-slate-300' : 'text-[#B56550]'
                                             } ${col.className || ""}`}>

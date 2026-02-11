@@ -6,7 +6,7 @@ import QRCode from "react-qr-code";
 import { db } from "@/lib/firebase";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, serverTimestamp, getDoc, arrayUnion } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import AdminTable from "@/components/admin/AdminTable";
 import SectionHeader from "@/components/ui/SectionHeader";
 import { useToast } from "@/components/ui/Toast";
@@ -35,6 +35,7 @@ export default function OrderManagementPage() {
     const { user } = useAuth();
     const [selectedOrderForQr, setSelectedOrderForQr] = useState<Order | null>(null);
     const params = useParams();
+    const router = useRouter();
     const locale = (params?.locale as string) || "en";
 
     useEffect(() => {
@@ -196,6 +197,13 @@ export default function OrderManagementPage() {
                             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Live Feed</span>
                             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
                         </div>
+                        <button
+                            onClick={() => router.push(`/${locale}/admin/orders/packing`)}
+                            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-orange-500/20 transition-all"
+                        >
+                            <Package className="w-4 h-4" />
+                            Packing Mode
+                        </button>
                     </div>
                 }
             />
