@@ -1,317 +1,398 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { BarChart3, TrendingUp, Users, ShoppingBag, IndianRupee, Package, ArrowUpRight, ArrowDownRight, Activity } from "lucide-react";
-import { db } from "@/lib/firebase";
-import { collection, query, getDocs, orderBy, limit, where, getDoc, doc } from "firebase/firestore";
-import SectionHeader from "@/components/ui/SectionHeader";
-import { motion } from "framer-motion";
+import React, { useEffect, useState } from 'react';
+import {
+    BarChart3,
+    TrendingUp,
+    Users,
+    ShoppingCart,
+    Clock,
+    BookOpen,
+    CheckCircle2,
+    XCircle,
+    ArrowUpRight,
+    ArrowDownRight,
+    Activity,
+    DollarSign,
+    Target
+} from 'lucide-react';
+import {
+    collection,
+    query,
+    where,
+    orderBy,
+    limit,
+    onSnapshot,
+    doc
+} from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { motion } from 'framer-motion';
 
-interface Stats {
-    totalRevenue: number;
-    totalOrders: number;
-    totalUsers: number;
-    totalBooks: number;
-    revenueGrowth: number;
-    orderGrowth: number;
-    categoryData: { name: string; value: number; color: string }[];
-    revenueHistory: { label: string; value: number }[];
-    lowStockCount: number;
-    pendingOrdersCount: number;
-    activeRidersCount: number;
-}
-
-export default function AnalyticsPage() {
-    const [stats, setStats] = useState<Stats>({
-        totalRevenue: 0,
-        totalOrders: 0,
-        totalUsers: 0,
-        totalBooks: 0,
-        revenueGrowth: 15.4,
-        orderGrowth: 10.2,
-        categoryData: [],
-        revenueHistory: [],
-        lowStockCount: 0,
-        pendingOrdersCount: 0,
-        activeRidersCount: 0
-    });
+export default function AnalyticsDashboard() {
+    const [dailyMetrics, setDailyMetrics] = useState<any[]>([]);
+    const [todayMetrics, setTodayMetrics] = useState<any>(null);
+    const [monthMetrics, setMonthMetrics] = useState<any>(null);
+    const [skuMetrics, setSkuMetrics] = useState<any[]>([]);
+    const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
     const [loading, setLoading] = useState(true);
-    const [isDark, setIsDark] = useState(false);
 
     useEffect(() => {
-        const checkDark = () => {
-            const saved = localStorage.getItem('admin-theme');
-            if (saved === 'dark') setIsDark(true);
-            else if (saved === 'system') setIsDark(window.matchMedia('(prefers-color-scheme: dark)').matches);
-            else setIsDark(false);
-        };
-        checkDark();
-        const interval = setInterval(checkDark, 500);
-        return () => clearInterval(interval);
-    }, []);
+        // 1. Fetch Today's metrics (real-time)
+        const todayId = new Date().toLocaleDateString('en-GB', {
+            timeZone: 'Asia/Kolkata', // IST as per backend logic
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).split('/').reverse().join('');
 
-    useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                // Fetch Orders
-                const ordersSnap = await getDocs(collection(db, "granthalaya_app", "orders_module", "orders"));
-                let revenue = 0;
-                ordersSnap.forEach(doc => {
-                    const data = doc.data();
-                    revenue += data.totalAmount || 0;
-                });
+        const unsubToday = onSnapshot(
+            doc(db, `granthalaya_app/analytics_module/dailyMetrics/${todayId}`),
+            (snap) => {
+                if (snap.exists()) setTodayMetrics(snap.data());
+            },
+            (err) => console.error("Today Metrics Error:", err)
+        );
 
-                // Fetch Users
-                const usersSnap = await getDocs(collection(db, "users"));
-
-                // Fetch Books
-                const booksSnap = await getDocs(collection(db, "granthalaya_app", "inventory", "books"));
-
-                // Categorize books for pie chart
-                const categories: Record<string, number> = {};
-                booksSnap.forEach(doc => {
-                    const cat = doc.data().category || "Uncategorized";
-                    categories[cat] = (categories[cat] || 0) + 1;
-                });
-
-                const colors = ["#F97316", "#3B82F6", "#8B5CF6", "#10B981", "#EC4899", "#6366F1"];
-                const categoryData = Object.entries(categories).map(([name, value], i) => ({
-                    name,
-                    value,
-                    color: colors[i % colors.length]
-                })).sort((a, b) => b.value - a.value).slice(0, 6);
-
-                // Calculate Health Metrics
-                const configSnap = await getDoc(doc(db, "granthalaya_app", "config"));
-                const lowStockThreshold = configSnap.exists() ? configSnap.data().lowStockThreshold : 5;
-
-                let lowStockCount = 0;
-                booksSnap.forEach(doc => {
-                    const book = doc.data();
-                    if ((book.stock || 0) <= lowStockThreshold) lowStockCount++;
-                });
-
-                let pendingOrdersCount = 0;
-                ordersSnap.forEach(doc => {
-                    if (doc.data().deliveryStatus === "pending") pendingOrdersCount++;
-                });
-
-                let activeRidersCount = 0;
-                usersSnap.forEach(doc => {
-                    if (doc.data().roles?.isRider) activeRidersCount++;
-                });
-
-                // Mock Revenue History for visualization
-                const revenueHistory = [
-                    { label: "Mon", value: 450 },
-                    { label: "Tue", value: 890 },
-                    { label: "Wed", value: 1200 },
-                    { label: "Thu", value: 980 },
-                    { label: "Fri", value: 1500 },
-                    { label: "Sat", value: 2100 },
-                    { label: "Sun", value: 1800 },
-                ];
-
-                setStats({
-                    totalRevenue: revenue,
-                    totalOrders: ordersSnap.size,
-                    totalUsers: usersSnap.size,
-                    totalBooks: booksSnap.size,
-                    revenueGrowth: 15.4,
-                    orderGrowth: 10.2,
-                    categoryData,
-                    revenueHistory,
-                    lowStockCount,
-                    pendingOrdersCount,
-                    activeRidersCount
-                });
-            } catch (error) {
-                console.error("Error fetching analytics:", error);
-            } finally {
-                setLoading(false);
+        // 1.1 Fetch Month metrics
+        const monthId = todayId.substring(0, 6); // YYYYMM
+        const unsubMonth = onSnapshot(
+            doc(db, `granthalaya_app/analytics_module/monthlyMetrics/${monthId}`),
+            (snap) => {
+                if (snap.exists()) setMonthMetrics(snap.data());
             }
+        );
+
+        // 1.2 Fetch Pending Orders Count (Logistics)
+        const qPending = query(
+            collection(db, "granthalaya_app", "orders_module", "orders"),
+            where("deliveryStatus", "in", ["pending", "packed", "shipped"])
+        );
+        const unsubPending = onSnapshot(qPending, (snap) => {
+            setPendingOrdersCount(snap.size);
+        });
+
+        // 2. Fetch Last 30 Days (for trends)
+        const qDaily = query(
+            collection(db, 'granthalaya_app/analytics_module/dailyMetrics'),
+            orderBy('__name__', 'desc'),
+            limit(30)
+        );
+
+        const unsubDaily = onSnapshot(qDaily, (snap) => {
+            const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            setDailyMetrics(docs.reverse());
+        }, (err) => console.error("Daily Metrics Error:", err));
+
+        const qSkus = query(
+            collection(db, 'granthalaya_app/analytics_module/skuMetrics'),
+            orderBy('unitsSold', 'desc'),
+            limit(10)
+        );
+
+        const unsubSkus = onSnapshot(qSkus, (snap) => {
+            setSkuMetrics(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            setLoading(false);
+        }, (err) => {
+            console.error("SKU Metrics Error:", err);
+            setLoading(false); // Don't block UI if one feed fails
+        });
+
+        return () => {
+            unsubToday();
+            unsubMonth();
+            unsubPending();
+            unsubDaily();
+            unsubSkus();
         };
-
-        fetchStats();
     }, []);
-
-    const statCards = [
-        { label: "Total Revenue", value: `₹${stats.totalRevenue.toLocaleString()}`, icon: IndianRupee, color: "text-emerald-500", bg: "bg-emerald-500/10", growth: stats.revenueGrowth },
-        { label: "Total Orders", value: stats.totalOrders.toString(), icon: ShoppingBag, color: "text-blue-500", bg: "bg-blue-500/10", growth: stats.orderGrowth },
-        { label: "Active Users", value: stats.totalUsers.toString(), icon: Users, color: "text-orange-500", bg: "bg-orange-500/10", growth: 4.5 },
-        { label: "Book Inventory", value: stats.totalBooks.toString(), icon: Package, color: "text-purple-500", bg: "bg-purple-500/10", growth: 2.1 },
-    ];
 
     if (loading) {
-        return <div className="animate-pulse space-y-8">
-            <div className="h-20 bg-slate-200 dark:bg-slate-800 rounded-3xl w-1/3"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-slate-200 dark:bg-slate-800 rounded-[2rem]"></div>)}
+        return (
+            <div className="flex h-96 items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             </div>
-        </div>;
+        );
     }
 
+    // Helper: Format Currency (INR)
+    const formatCurrency = (val: number) => {
+        return new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+            maximumFractionDigits: 0
+        }).format(val);
+    };
+
+    // Calculate Averages
+    const getAvgTime = (total: number, count: number) => {
+        if (!count || count === 0) return '0m';
+        const mins = Math.round((total / count) / 60000);
+        return `${mins}m`;
+    };
+
+    const reservationToPackAvg = getAvgTime(todayMetrics?.total_resToPack_Time || 0, todayMetrics?.resToPack_Count || 0);
+    const packToDeliveryAvg = getAvgTime(todayMetrics?.total_packToDelivery_Time || 0, todayMetrics?.packToDelivery_Count || 0);
+
+    // Calculate Conversion Rate
+    const conversionRate = todayMetrics?.reservationsCreated
+        ? Math.round((todayMetrics.ordersDelivered / todayMetrics.reservationsCreated) * 100)
+        : 0;
+
     return (
-        <div className="space-y-8">
-            <SectionHeader
-                icon={BarChart3}
-                title="Dashboard"
-                subtitle="Real-time performance metrics and growth insights"
-            />
+        <div className="space-y-8 pb-12">
+            {/* Header */}
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight text-gray-900 flex items-center gap-3">
+                    <BarChart3 className="h-8 w-8 text-primary" />
+                    Operational Intelligence
+                </h1>
+                <p className="mt-2 text-gray-500">
+                    Real-time business performance and logistics analytics.
+                </p>
+            </div>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {statCards.map((card, idx) => (
-                    <motion.div
-                        key={card.label}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.1 }}
-                        className={`p-6 rounded-[2.5rem] border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}
-                    >
-                        <div className="flex justify-between items-start mb-4">
-                            <div className={`p-3 rounded-2xl ${card.bg}`}>
-                                <card.icon className={`w-5 h-5 ${card.color}`} />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                <StatCard
+                    title="Month Revenue"
+                    value={formatCurrency(monthMetrics?.revenue || 0)}
+                    subValue={`${monthMetrics?.ordersDelivered || 0} Delivered`}
+                    icon={<DollarSign className="h-5 w-5" />}
+                    trend="This Month"
+                    color="green"
+                />
+                <StatCard
+                    title="Today's Revenue"
+                    value={formatCurrency(todayMetrics?.revenue || 0)}
+                    subValue={`${todayMetrics?.ordersDelivered || 0} Deliveries`}
+                    icon={<TrendingUp className="h-5 w-5" />}
+                    trend="Real-time"
+                    color="blue"
+                />
+                <StatCard
+                    title="Orders Pending"
+                    value={pendingOrdersCount}
+                    subValue="Logistics Queue"
+                    icon={<ShoppingCart className="h-5 w-5" />}
+                    trend="Action Required"
+                    color="orange"
+                />
+                <StatCard
+                    title="New Reservations"
+                    value={todayMetrics?.reservationsCreated || 0}
+                    subValue="Active holds"
+                    icon={<Activity className="h-5 w-5" />}
+                    trend="Today"
+                    color="purple"
+                />
+                <StatCard
+                    title="Delivery Success"
+                    value={`${conversionRate}%`}
+                    subValue="Res → Delivered"
+                    icon={<CheckCircle2 className="h-5 w-5" />}
+                    trend="Overall"
+                    color="blue"
+                />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Orders Trend Graph (Simple CSS Bar Chart) */}
+                <div className="lg:col-span-2 bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-900">Order Volume Trend</h2>
+                            <p className="text-sm text-gray-500">Last 30 days activity</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="flex items-center gap-1 text-xs font-semibold text-gray-400 bg-gray-50 px-2 py-1 rounded">
+                                <Activity className="h-3 w-3" /> Orders/Day
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="h-48 flex items-end justify-between gap-1 mt-4">
+                        {dailyMetrics.map((day, i) => (
+                            <div key={day.id} className="flex-1 flex flex-col items-center group relative">
+                                <motion.div
+                                    initial={{ height: 0 }}
+                                    animate={{ height: `${Math.min(100, (day.ordersPlaced / 50) * 100)}%` }}
+                                    className={`w-full rounded-t-sm transition-all ${i === dailyMetrics.length - 1 ? 'bg-primary' : 'bg-primary/20 hover:bg-primary/40'}`}
+                                />
+                                {/* Tooltip */}
+                                <div className="absolute bottom-full mb-2 hidden group-hover:block z-10">
+                                    <div className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded shadow-lg whitespace-nowrap">
+                                        {day.id}: {day.ordersPlaced} orders
+                                    </div>
+                                </div>
                             </div>
-                            <div className={`flex items-center gap-0.5 text-[10px] font-bold ${card.growth >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                                {card.growth >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                                {Math.abs(card.growth)}%
+                        ))}
+                    </div>
+                    <div className="flex justify-between mt-4 text-[10px] text-gray-400 font-medium px-1">
+                        <span>{dailyMetrics[0]?.id}</span>
+                        <span>Today</span>
+                    </div>
+                </div>
+
+                {/* Operational Timing Card */}
+                <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
+                    <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                        <Clock className="h-5 w-5 text-gray-400" />
+                        Logistics Speed
+                    </h2>
+
+                    <div className="space-y-6">
+                        <TimingMetric
+                            label="Res → Packing"
+                            value={reservationToPackAvg}
+                            description="Time to start processing"
+                        />
+                        <TimingMetric
+                            label="Packing → Delivered"
+                            value={packToDeliveryAvg}
+                            description="Last mile transit speed"
+                        />
+
+                        <div className="pt-4 border-t border-gray-50">
+                            <div className="flex items-center justify-between text-sm mb-2">
+                                <span className="text-gray-500">Shelf Velocity</span>
+                                <span className="font-bold text-green-600">Optimal</span>
+                            </div>
+                            <div className="w-full bg-gray-50 h-2 rounded-full overflow-hidden">
+                                <div className="bg-green-500 h-full w-[85%]" />
                             </div>
                         </div>
-                        <h4 className="text-xs font-semibold text-slate-500 mb-1">{card.label}</h4>
-                        <p className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{card.value}</p>
-                    </motion.div>
-                ))}
+                    </div>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Sales Performance Chart */}
-                <div className={`p-8 rounded-[3rem] border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <h3 className="font-bold">Sales Performance</h3>
-                            <p className="text-xs text-slate-500">Revenue trends over the last 7 days</p>
-                        </div>
-                        <TrendingUp className="w-5 h-5 text-emerald-500 opacity-50" />
+                {/* Top SKUs Intelligence */}
+                <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
+                    <div className="p-8 pb-4 border-b border-gray-50 flex items-center justify-between">
+                        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                            <BookOpen className="h-5 w-5 text-blue-500" />
+                            Inventory Velocity
+                        </h2>
+                        <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase">Top Performers</span>
                     </div>
-
-                    <div className="flex items-end justify-between h-64 gap-2 pt-4 px-2 overflow-hidden">
-                        {stats.revenueHistory.map((item, i) => {
-                            const maxVal = Math.max(...stats.revenueHistory.map(h => h.value));
-                            const height = (item.value / maxVal) * 100;
-                            return (
-                                <div key={i} className="flex-1 flex flex-col items-center gap-4 group">
-                                    <div className="w-full relative h-full flex items-end">
-                                        <motion.div
-                                            initial={{ height: 0 }}
-                                            animate={{ height: `${height}%` }}
-                                            transition={{ delay: 0.5 + (i * 0.1), duration: 1 }}
-                                            className={`w-full rounded-t-xl transition-all duration-300 group-hover:bg-orange-600 ${isDark ? 'bg-orange-500/20 shadow-[0_-4px_12px_rgba(249,115,22,0.1)]' : 'bg-orange-500'}`}
-                                        />
-                                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
-                                            ₹{item.value}
-                                        </div>
+                    <div className="divide-y divide-gray-50">
+                        {skuMetrics.slice(0, 5).map((sku) => (
+                            <div key={sku.id} className="p-5 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-400">
+                                        BK
                                     </div>
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">{item.label}</span>
+                                    <div>
+                                        <div className="text-sm font-bold text-gray-900">{sku.id}</div>
+                                        <div className="text-xs text-gray-500">Velocity Score: {sku.velocityScore || 'Pending'}</div>
+                                    </div>
                                 </div>
-                            );
-                        })}
+                                <div className="text-right">
+                                    <div className="text-sm font-bold text-gray-900">{sku.unitsSold || 0} Sold</div>
+                                    <div className="text-[10px] text-green-600 font-bold uppercase tracking-wider flex items-center gap-1 justify-end">
+                                        <ArrowUpRight className="h-3 w-3" /> High
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
-                {/* Popular Categories Visualization */}
-                <div className={`p-8 rounded-[3rem] border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <h3 className="font-bold">Inventory Breakdown</h3>
-                            <p className="text-xs text-slate-500">Stock distribution by top categories</p>
-                        </div>
-                        <Package className="w-5 h-5 text-purple-500 opacity-50" />
-                    </div>
+                {/* Conversion Funnel */}
+                <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
+                    <h2 className="text-xl font-bold text-gray-900 mb-8 flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-purple-500" />
+                        Conversion Funnel
+                    </h2>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center h-64">
-                        <div className="relative aspect-square flex items-center justify-center">
-                            {/* Simple Circular Visualization using layered circles or SVG */}
-                            <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                                {stats.categoryData.reduce((acc, cat, idx) => {
-                                    const total = stats.categoryData.reduce((sum, c) => sum + c.value, 0);
-                                    const percentage = (cat.value / total) * 100;
-                                    const offset = acc.totalOffset;
+                    <div className="space-y-4">
+                        <FunnelStep
+                            label="Reservations Created"
+                            count={todayMetrics?.reservationsCreated || 0}
+                            percent={100}
+                            color="bg-blue-500"
+                        />
+                        <FunnelStep
+                            label="Orders Packed"
+                            count={todayMetrics?.resToPack_Count || 0}
+                            percent={todayMetrics?.reservationsCreated ? Math.round((todayMetrics.resToPack_Count / todayMetrics.reservationsCreated) * 100) : 0}
+                            color="bg-purple-500"
+                        />
+                        <FunnelStep
+                            label="Successfully Delivered"
+                            count={todayMetrics?.ordersDelivered || 0}
+                            percent={conversionRate}
+                            color="bg-green-500"
+                        />
 
-                                    const strokeDasharray = `${percentage} ${100 - percentage}`;
-                                    const strokeDashoffset = -offset;
-
-                                    acc.elements.push(
-                                        <motion.circle
-                                            key={idx}
-                                            cx="50"
-                                            cy="50"
-                                            r="40"
-                                            fill="transparent"
-                                            stroke={cat.color}
-                                            strokeWidth="12"
-                                            strokeDasharray={strokeDasharray}
-                                            strokeDashoffset={strokeDashoffset}
-                                            pathLength="100"
-                                            initial={{ pathLength: 0 }}
-                                            animate={{ pathLength: 100 }}
-                                            transition={{ duration: 1.5, delay: 0.2 }}
-                                        />
-                                    );
-                                    acc.totalOffset += percentage;
-                                    return acc;
-                                }, { elements: [] as any, totalOffset: 0 }).elements}
-                                <circle cx="50" cy="50" r="34" fill={isDark ? "#1e293b" : "white"} />
-                            </svg>
-                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                <span className={`text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{stats.totalBooks}</span>
-                                <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Books</span>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            {stats.categoryData.map((cat, i) => (
-                                <div key={i} className="flex items-center justify-between group">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
-                                        <span className="text-xs font-bold text-slate-500 group-hover:text-slate-700 transition-colors truncate max-w-[100px]">{cat.name}</span>
-                                    </div>
-                                    <span className={`text-xs font-black ${isDark ? 'text-slate-300' : 'text-slate-900'}`}>{cat.value}</span>
-                                </div>
-                            ))}
-                            {stats.categoryData.length === 0 && (
-                                <div className="text-center py-4">
-                                    <p className="text-xs text-slate-400">No inventory data available</p>
-                                </div>
-                            )}
+                        <div className="mt-8 p-4 bg-orange-50 rounded-2xl border border-orange-100">
+                            <p className="text-xs text-orange-800 font-medium leading-relaxed">
+                                <b>Optimization Tip:</b> {100 - conversionRate}% of your traffic drops out between reservation and delivery. Review <b>abandoned holds</b> to improve fulfillment.
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
+    );
+}
 
-            {/* Recent Activity placeholder */}
-            <div className={`p-8 rounded-[3rem] border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
-                <div className="flex items-center justify-between mb-8">
-                    <div>
-                        <h3 className="font-bold text-lg">System Health</h3>
-                        <p className="text-xs text-slate-500">Live indicators for inventory and logistics</p>
-                    </div>
-                    <Activity className="w-6 h-6 text-orange-500 animate-pulse" />
+function StatCard({ title, value, subValue, icon, trend, color }: any) {
+    const isUp = trend?.startsWith('+');
+    const colorClasses: any = {
+        green: 'bg-green-50 text-green-600 border-green-100',
+        blue: 'bg-blue-50 text-blue-600 border-blue-100',
+        orange: 'bg-orange-50 text-orange-600 border-orange-100',
+        red: 'bg-red-50 text-red-600 border-red-100'
+    };
+
+    return (
+        <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+                <div className={`p-2.5 rounded-xl ${colorClasses[color]}`}>
+                    {icon}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
-                        <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1 block">Logistics Status</span>
-                        <p className="text-sm font-bold">{stats.activeRidersCount} riders registered</p>
+                {trend && (
+                    <div className={`flex items-center gap-0.5 text-xs font-bold ${isUp ? 'text-green-600' : trend === 'Stable' ? 'text-gray-400' : 'text-red-600'}`}>
+                        {isUp ? <ArrowUpRight className="h-3 w-3" /> : !isUp && trend !== 'Stable' ? <ArrowDownRight className="h-3 w-3" /> : null}
+                        {trend}
                     </div>
-                    <div className="p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10">
-                        <span className="text-[10px] font-bold text-orange-600 uppercase tracking-widest mb-1 block">Inventory Alert</span>
-                        <p className="text-sm font-bold">{stats.lowStockCount} books below threshold</p>
-                    </div>
-                    <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10">
-                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1 block">Orders Pending</span>
-                        <p className="text-sm font-bold">{stats.pendingOrdersCount} orders awaiting pickup</p>
-                    </div>
-                </div>
+                )}
+            </div>
+            <div className="text-2xl font-black text-gray-900 tracking-tight">{value}</div>
+            <div className="text-sm font-bold text-gray-900 mt-1">{title}</div>
+            <p className="text-[11px] text-gray-400 mt-1 font-medium">{subValue}</p>
+        </div>
+    );
+}
+
+function TimingMetric({ label, value, description }: any) {
+    return (
+        <div className="flex items-center justify-between">
+            <div>
+                <div className="text-sm font-bold text-gray-900">{label}</div>
+                <div className="text-[11px] text-gray-400">{description}</div>
+            </div>
+            <div className="text-right">
+                <div className="text-lg font-black text-gray-900 tracking-tight">{value}</div>
+            </div>
+        </div>
+    );
+}
+
+function FunnelStep({ label, count, percent, color }: any) {
+    return (
+        <div className="space-y-1.5">
+            <div className="flex justify-between text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                <span>{label}</span>
+                <span>{count} ({percent}%)</span>
+            </div>
+            <div className="h-4 bg-gray-50 rounded-lg overflow-hidden flex">
+                <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${percent}%` }}
+                    className={`${color} h-full rounded-lg`}
+                />
             </div>
         </div>
     );

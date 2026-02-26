@@ -27,6 +27,8 @@ import {
     BarChart3,
     AlertTriangle,
     Printer,
+    ShieldAlert,
+    GraduationCap,
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
@@ -61,6 +63,7 @@ const navGroups: NavGroup[] = [
         suites: ['granthalaya'],
         items: [
             { name: "Dashboard", href: "/admin/analytics", icon: LayoutDashboard },
+            { name: "System Health", href: "/admin/system-health", icon: ShieldAlert },
             { name: "Low Stock Alerts", href: "/admin/books/alerts", icon: AlertTriangle },
             { name: "Granthalaya Logs", href: "/admin/books/logs", icon: History },
         ]
@@ -72,6 +75,7 @@ const navGroups: NavGroup[] = [
             { name: "Events", href: "/admin/events", icon: Calendar },
             { name: "News & Activities", href: "/admin/news", icon: Newspaper },
             { name: "Spiritual Content", href: "/admin/spiritual", icon: Sprout },
+            { name: "Sanskar Courses", href: "/admin/lms", icon: GraduationCap },
             { name: "Media Library", href: "/admin/media", icon: FileText },
         ]
     },
@@ -118,7 +122,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     // Auto-switch suite based on URL
     useEffect(() => {
-        if (pathname.includes("/admin/books") || pathname.includes("/admin/analytics") || pathname.includes("/admin/users") || pathname.includes("/admin/racks") || pathname.includes("/admin/orders")) {
+        if (pathname.includes("/admin/books") || pathname.includes("/admin/analytics") || pathname.includes("/admin/users") || pathname.includes("/admin/racks") || pathname.includes("/admin/orders") || pathname.includes("/admin/system-health")) {
             setActiveSuite('granthalaya');
         } else if (pathname.includes("/admin/dashboard") || pathname.includes("/admin/logs")) {
             // Keep current suite for core pages or default to first visit
@@ -148,6 +152,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }, [theme]);
 
     useEffect(() => {
+        if (resolvedTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }, [resolvedTheme]);
+
+    useEffect(() => {
         localStorage.setItem('admin-theme', theme);
     }, [theme]);
 
@@ -164,12 +176,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const isDark = resolvedTheme === 'dark';
 
     if (isLoginPage) {
-        return <div className={`min-h-screen ${isDark ? 'bg-slate-900' : 'bg-slate-50'}`}>{children}</div>;
+        return <div className={`min-h-screen ${isDark ? 'bg-zinc-950' : 'bg-slate-50'}`}>{children}</div>;
     }
 
     return (
         <AdminGuard>
-            <div className={`min-h-screen flex overflow-hidden transition-colors duration-200 ${isDark ? 'bg-slate-900 text-slate-100' : 'bg-slate-100 text-slate-800'
+            <div className={`min-h-screen flex overflow-hidden transition-colors duration-200 ${isDark ? 'dark bg-zinc-950 text-zinc-100' : 'bg-slate-100 text-slate-800'
                 }`}>
                 {/* Mobile Sidebar Overlay */}
                 {sidebarOpen && (
@@ -183,13 +195,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <aside
                     className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-all duration-300 ease-out lg:relative lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
                         } ${isDark
-                            ? 'bg-slate-800 border-r border-slate-700'
+                            ? 'bg-zinc-900 border-r border-zinc-800'
                             : 'bg-white border-r border-slate-200 shadow-sm'
                         }`}
                 >
                     <div className="flex flex-col h-full bg-surface/5">
                         {/* Sidebar Header */}
-                        <div className={`p-5 flex items-center justify-between border-b ${isDark ? 'border-slate-700' : 'border-slate-200'
+                        <div className={`p-5 flex items-center justify-between border-b ${isDark ? 'border-zinc-800' : 'border-slate-200'
                             }`}>
                             <div className="flex items-center gap-3">
                                 <div className={`w-9 h-9 flex items-center justify-center font-bold text-white text-sm shadow-md rounded-lg bg-gradient-to-br ${activeSuite === 'app' ? 'from-orange-500 to-orange-600' : 'from-blue-500 to-blue-600'
@@ -200,14 +212,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                     <span className={`font-semibold text-sm block tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
                                         {activeSuite === 'app' ? 'Gayatri App' : 'Granthalaya'}
                                     </span>
-                                    <span className={`text-[10px] font-medium opacity-60 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                    <span className={`text-[10px] font-medium opacity-60 ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
                                         Admin Suite
                                     </span>
                                 </div>
                             </div>
                             <button
                                 onClick={() => setSidebarOpen(false)}
-                                className={`lg:hidden p-1.5 rounded-md transition-colors ${isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-100'
+                                className={`lg:hidden p-1.5 rounded-md transition-colors ${isDark ? 'hover:bg-zinc-800' : 'hover:bg-slate-100'
                                     }`}
                             >
                                 <X className="w-5 h-5" />
@@ -219,7 +231,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             {navGroups.filter(g => g.suites.includes(activeSuite)).map((group) => (
                                 <div key={group.label}>
                                     <div className="px-3 mb-2">
-                                        <span className={`text-[10px] font-semibold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-400'
+                                        <span className={`text-[10px] font-semibold uppercase tracking-wider ${isDark ? 'text-zinc-500' : 'text-slate-400'
                                             }`}>
                                             {group.label}
                                         </span>
@@ -251,13 +263,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                                                 ? 'bg-orange-500/15 text-orange-400'
                                                                 : 'bg-orange-50 text-orange-600'
                                                             : isDark
-                                                                ? 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+                                                                ? 'text-zinc-400 hover:bg-zinc-700/50 hover:text-zinc-200'
                                                                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                                                         }`}
                                                 >
                                                     <item.icon className={`w-[18px] h-[18px] ${isActive
                                                         ? isDark ? 'text-orange-400' : 'text-orange-500'
-                                                        : isDark ? 'text-slate-500' : 'text-slate-400'
+                                                        : isDark ? 'text-zinc-500' : 'text-slate-400'
                                                         }`} />
                                                     <span>{item.name}</span>
                                                 </Link>
@@ -274,13 +286,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <button
                                 onClick={cycleTheme}
                                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isDark
-                                    ? 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+                                    ? 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'
                                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                                     }`}
                             >
                                 {theme === 'light' && <Sun className="w-[18px] h-[18px] text-amber-500" />}
                                 {theme === 'dark' && <Moon className="w-[18px] h-[18px] text-blue-400" />}
-                                {theme === 'system' && <Monitor className="w-[18px] h-[18px] text-slate-400" />}
+                                {theme === 'system' && <Monitor className="w-[18px] h-[18px] text-zinc-400" />}
                                 <span className="capitalize">{theme} Mode</span>
                             </button>
 
@@ -288,7 +300,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <button
                                 onClick={handleLogout}
                                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isDark
-                                    ? 'text-slate-400 hover:bg-red-500/10 hover:text-red-400'
+                                    ? 'text-zinc-400 hover:bg-red-500/10 hover:text-red-400'
                                     : 'text-slate-600 hover:bg-red-50 hover:text-red-600'
                                     }`}
                             >
@@ -302,13 +314,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {/* Main Content */}
                 <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
                     {/* Top Bar */}
-                    <header className={`flex items-center justify-between px-4 lg:px-8 h-14 shrink-0 border-b relative z-[60] ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+                    <header className={`flex items-center justify-between px-4 lg:px-8 h-14 shrink-0 border-b relative z-[60] ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-200'
                         }`}>
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => setSidebarOpen(!sidebarOpen)}
                                 className={`p-2 rounded-lg transition-colors lg:hidden ${isDark
-                                    ? 'hover:bg-slate-700 text-slate-400 hover:text-white'
+                                    ? 'hover:bg-zinc-800 text-zinc-400 hover:text-white'
                                     : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'
                                     }`}
                             >
@@ -320,7 +332,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 <button
                                     onClick={() => setShowSuiteSwitcher(!showSuiteSwitcher)}
                                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border ${isDark
-                                        ? 'border-slate-700 hover:bg-slate-700 text-slate-300'
+                                        ? 'border-zinc-800 hover:bg-zinc-800 text-zinc-300'
                                         : 'border-slate-200 hover:bg-slate-100 text-slate-600'
                                         }`}
                                 >
@@ -335,7 +347,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                             className="fixed inset-0 z-10"
                                             onClick={() => setShowSuiteSwitcher(false)}
                                         />
-                                        <div className={`absolute top-full left-0 mt-2 w-56 rounded-xl shadow-2xl border p-1 z-20 animate-in fade-in zoom-in duration-200 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+                                        <div className={`absolute top-full left-0 mt-2 w-56 rounded-xl shadow-2xl border p-1 z-20 animate-in fade-in zoom-in duration-200 ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-200'
                                             }`}>
                                             <button
                                                 onClick={() => {
@@ -344,7 +356,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                                 }}
                                                 className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all ${activeSuite === 'app'
                                                     ? isDark ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-50 text-orange-600'
-                                                    : isDark ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-600 hover:bg-slate-50'
+                                                    : isDark ? 'text-zinc-400 hover:bg-zinc-800' : 'text-slate-600 hover:bg-slate-50'
                                                     }`}
                                             >
                                                 <div className="flex items-center gap-3">
@@ -363,7 +375,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                                 }}
                                                 className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all mt-1 ${activeSuite === 'granthalaya'
                                                     ? isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-600'
-                                                    : isDark ? 'text-slate-400 hover:bg-slate-700' : 'text-slate-600 hover:bg-slate-50'
+                                                    : isDark ? 'text-zinc-400 hover:bg-zinc-800' : 'text-slate-600 hover:bg-slate-50'
                                                     }`}
                                             >
                                                 <div className="flex items-center gap-3">
@@ -380,7 +392,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             </div>
                         </div>
 
-                        <div className={`text-sm font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        <div className={`text-sm font-medium ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
                             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                         </div>
                     </header>

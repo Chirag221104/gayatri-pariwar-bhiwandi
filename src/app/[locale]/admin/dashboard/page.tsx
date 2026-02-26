@@ -12,11 +12,13 @@ import {
     BarChart3,
     PieChart,
     Clock,
-    ChevronRight
+    ChevronRight,
+    LayoutDashboard
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, limit } from "firebase/firestore";
 import { useRouter, useParams } from "next/navigation";
+import SectionHeader from "@/components/ui/SectionHeader";
 
 interface DashboardStats {
     totalUsers: number;
@@ -186,16 +188,12 @@ export default function AdminDashboard() {
     }
 
     return (
-        <div className="space-y-8">
-            {/* Header */}
-            <div>
-                <h1 className={`text-2xl font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                    Dashboard
-                </h1>
-                <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    Welcome back! Here's what's happening with your community.
-                </p>
-            </div>
+        <div className="space-y-8 flex flex-col h-[calc(100vh-8rem)]">
+            <SectionHeader
+                title="Dashboard"
+                subtitle="Welcome back! Here's what's happening with your community."
+                icon={LayoutDashboard}
+            />
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -208,7 +206,7 @@ export default function AdminDashboard() {
                             ${card.primary
                                 ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/25'
                                 : isDark
-                                    ? 'bg-slate-800 hover:bg-slate-750 border border-slate-700'
+                                    ? 'bg-zinc-900 hover:bg-zinc-800 border border-zinc-800'
                                     : 'bg-white hover:shadow-md shadow-sm border border-slate-200'
                             }
                         `}
@@ -217,7 +215,7 @@ export default function AdminDashboard() {
                             <div className={`p-2 rounded-lg ${card.primary
                                 ? 'bg-white/20'
                                 : isDark
-                                    ? 'bg-slate-700'
+                                    ? 'bg-zinc-800'
                                     : 'bg-slate-100'
                                 }`}>
                                 <card.icon className={`w-5 h-5 ${card.primary
@@ -238,7 +236,7 @@ export default function AdminDashboard() {
                         <div className={`text-sm font-medium mb-1 ${card.primary
                             ? 'text-white/80'
                             : isDark
-                                ? 'text-slate-400'
+                                ? 'text-zinc-400'
                                 : 'text-slate-500'
                             }`}>
                             {card.name}
@@ -274,11 +272,11 @@ export default function AdminDashboard() {
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* Activity Chart */}
-                <div className={`lg:col-span-2 p-6 rounded-xl ${isDark ? 'bg-slate-800 border border-slate-700' : 'bg-white shadow-sm border border-slate-200'
+                <div className={`lg:col-span-2 p-6 rounded-xl ${isDark ? 'bg-zinc-900 border border-zinc-800' : 'bg-white shadow-sm border border-slate-200'
                     }`}>
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`}>
+                            <div className={`p-2 rounded-lg ${isDark ? 'bg-zinc-800' : 'bg-slate-100'}`}>
                                 <BarChart3 className={`w-5 h-5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
                             </div>
                             <div>
@@ -291,7 +289,7 @@ export default function AdminDashboard() {
                             </div>
                         </div>
                         <select className={`text-sm px-3 py-1.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-orange-500/20 ${isDark
-                            ? 'bg-slate-700 border-slate-600 text-slate-300'
+                            ? 'bg-zinc-800 border-zinc-700 text-zinc-300'
                             : 'bg-white border-slate-200 text-slate-600'
                             }`}>
                             <option>This week</option>
@@ -300,7 +298,7 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* Chart Placeholder */}
-                    <div className={`h-48 rounded-lg flex items-center justify-center border-2 border-dashed ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-slate-200 bg-slate-50'
+                    <div className={`h-48 rounded-lg flex items-center justify-center border-2 border-dashed ${isDark ? 'border-zinc-800 bg-zinc-950/50' : 'border-slate-200 bg-slate-50'
                         }`}>
                         <div className="text-center">
                             <BarChart3 className={`w-10 h-10 mx-auto mb-2 ${isDark ? 'text-slate-600' : 'text-slate-300'}`} />
@@ -312,10 +310,10 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Engagement Breakdown */}
-                <div className={`p-6 rounded-xl ${isDark ? 'bg-slate-800 border border-slate-700' : 'bg-white shadow-sm border border-slate-200'
+                <div className={`p-6 rounded-xl ${isDark ? 'bg-zinc-900 border border-zinc-800' : 'bg-white shadow-sm border border-slate-200'
                     }`}>
                     <div className="flex items-center gap-3 mb-6">
-                        <div className={`p-2 rounded-lg ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`}>
+                        <div className={`p-2 rounded-lg ${isDark ? 'bg-zinc-800' : 'bg-slate-100'}`}>
                             <PieChart className={`w-5 h-5 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
                         </div>
                         <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
@@ -324,7 +322,7 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* Pie Placeholder */}
-                    <div className={`h-32 rounded-lg flex items-center justify-center border-2 border-dashed mb-4 ${isDark ? 'border-slate-700 bg-slate-900/50' : 'border-slate-200 bg-slate-50'
+                    <div className={`h-32 rounded-lg flex items-center justify-center border-2 border-dashed mb-4 ${isDark ? 'border-zinc-800 bg-zinc-950/50' : 'border-slate-200 bg-slate-50'
                         }`}>
                         <PieChart className={`w-8 h-8 ${isDark ? 'text-slate-600' : 'text-slate-300'}`} />
                     </div>
@@ -349,10 +347,10 @@ export default function AdminDashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div className={`p-6 rounded-xl ${isDark ? 'bg-slate-800 border border-slate-700' : 'bg-white shadow-sm border border-slate-200'
+            <div className={`p-6 rounded-xl ${isDark ? 'bg-zinc-900 border border-zinc-800' : 'bg-white shadow-sm border border-slate-200'
                 }`}>
                 <div className="flex items-center gap-3 mb-5">
-                    <div className={`p-2 rounded-lg ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`}>
+                    <div className={`p-2 rounded-lg ${isDark ? 'bg-zinc-800' : 'bg-slate-100'}`}>
                         <Clock className={`w-5 h-5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`} />
                     </div>
                     <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
@@ -371,7 +369,7 @@ export default function AdminDashboard() {
                             key={action.label}
                             onClick={() => handleAction(action.href)}
                             className={`flex items-center justify-between p-3 rounded-lg text-sm font-medium transition-all ${isDark
-                                ? 'bg-slate-700 hover:bg-slate-600 text-slate-200'
+                                ? 'bg-zinc-800 hover:bg-zinc-750 text-zinc-200'
                                 : 'bg-slate-50 hover:bg-slate-100 text-slate-700'
                                 }`}
                         >

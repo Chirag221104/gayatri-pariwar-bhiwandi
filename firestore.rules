@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is a signed-in admin
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email.matches('.*@awgp\\.org$') || 
+        request.auth.token.admin == true
+      );
+    }
+
+    // Daily Quotes: Public read, Admin write
+    match /spiritual_content/daily_quotes/items/{quoteId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Meditation Tips: Public read, Admin write
+    match /spiritual_content/meditation_tips/items/{tipId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Spiritual Resources: Public read, Admin write
+    match /spiritual_content/resources/items/{resourceId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Mantras: Public read, Admin write
+    match /mantras/{mantraId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Collective Goals (Sankalp): Public read, Admin write
+    match /collective_goals/{goalId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // News & Activities: Public read, Admin write
+    match /news/{newsId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Admin Logs: Admin read/write only
+    match /admin_logs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Media Library: Public read, Admin write
+    match /media_library/{path=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // LMS Content: Public read, Admin write
+    match /courses/{path=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /lessons/{path=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /quizzes/{path=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

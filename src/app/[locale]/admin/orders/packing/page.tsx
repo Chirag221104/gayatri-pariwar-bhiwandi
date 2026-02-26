@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { ArrowLeft, Package, CheckCircle, Truck, AlertCircle, Printer, Maximize2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { db } from "@/lib/firebase";
+import { useRouter, useParams } from "next/navigation";
+import { db, functions } from "@/lib/firebase";
 import { doc, getDoc, updateDoc, serverTimestamp, arrayUnion, onSnapshot, collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
 import { useAuth } from "@/context/AuthContext";
 import PackingScanner from "@/components/admin/granthalaya/PackingScanner";
 import { useToast } from "@/components/ui/Toast";
@@ -40,6 +41,7 @@ interface Order {
     userId: string;
     customerName: string;
     status: string;
+    fulfillmentStatus: string;
     deliveryStatus: string;
     items: OrderItem[];
     createdAt: any;
@@ -50,6 +52,8 @@ interface Order {
 
 export default function PackingModePage() {
     const router = useRouter();
+    const params = useParams();
+    const locale = (params?.locale as string) || "en";
     const { user } = useAuth();
     const { showToast } = useToast();
     const [isDark, setIsDark] = useState(false);
@@ -127,20 +131,13 @@ export default function PackingModePage() {
             if (snap.exists()) {
                 const data = { id: snap.id, ...snap.data() } as Order;
 
-                // Merge remote packing progress if available
-                // Assuming we might add 'packingProgress' field later for cross-device sync
-                // For now, we mainly sync status and details
-
                 setCurrentOrder(prev => {
-                    // Preserve local verification if remote doesn't have it (hybrid for now)
-                    // But if remote status changes to PACKED, we should respect that
                     if (JSON.stringify(prev) !== JSON.stringify(data)) {
                         return data;
                     }
                     return prev;
                 });
 
-                // Phase 25: Sync item-level verification from mobile scans
                 if (data.packingProgress) {
                     setVerifiedItems(prev => {
                         const next = { ...prev };
@@ -175,10 +172,8 @@ export default function PackingModePage() {
                 };
                 fetchMissingBooks();
 
-                // If status changed to PACKED externally
-                if (data.deliveryStatus === 'packed' && currentOrder.deliveryStatus !== 'packed') {
+                if (data.deliveryStatus === 'packed' && currentOrder?.deliveryStatus !== 'packed') {
                     showToast("Order completed by another device!", "success");
-                    // Optionally redirect or show success state
                 }
             }
         }, (error) => {
@@ -191,17 +186,14 @@ export default function PackingModePage() {
     const fetchOrder = async (orderId: string) => {
         if (!orderId) return;
 
-        // Strip prefix and common symbols
         const finalId = orderId.replace(/^ORD-/i, '').replace(/^#/i, '').trim();
 
         setLoading(true);
         setShowSuggestions(false);
         try {
-            // 1. Try direct ID match (case-sensitive)
             let docRef = doc(db, "granthalaya_app", "orders_module", "orders", finalId);
             let snap = await getDoc(docRef);
 
-            // 2. If not found, try case-insensitive lookup in local cache
             if (!snap.exists()) {
                 const found = pendingOrders.find(o => o.id.toLowerCase() === finalId.toLowerCase());
                 if (found) {
@@ -210,7 +202,6 @@ export default function PackingModePage() {
                 }
             }
 
-            // 3. If STILL not found and it's not a short ID, try a name query
             if (!snap.exists() && finalId.length > 3) {
                 const q = query(
                     collection(db, "granthalaya_app", "orders_module", "orders"),
@@ -226,9 +217,8 @@ export default function PackingModePage() {
             if (snap && snap.exists()) {
                 const data = { id: snap.id, ...snap.data() } as Order;
                 setCurrentOrder(data);
-                setSearchInput(""); // Clear search
+                setSearchInput("");
 
-                // Fetch book details for each item
                 const bookData: Record<string, BookDetails> = {};
                 await Promise.all(data.items.map(async (item) => {
                     const bookRef = doc(db, "granthalaya_app", "inventory", "books", item.bookId);
@@ -239,7 +229,6 @@ export default function PackingModePage() {
                 }));
                 setBooks(bookData);
 
-                // Reset local state only on NEW order load
                 setVerifiedItems(data.packingProgress || {});
                 setVerifiedRacks(new Set());
                 setScannedRack(null);
@@ -247,7 +236,18 @@ export default function PackingModePage() {
                 if (data.deliveryStatus === 'packed') {
                     showToast("Ordered is already packed.", "info");
                 } else {
-                    showToast(`Order loaded: #${data.id.slice(-8)}`, "success");
+                    if (data.fulfillmentStatus === 'PLACED') {
+                        try {
+                            const startPackingFn = httpsCallable(functions, 'granthalayaStartPacking');
+                            await startPackingFn({ orderId: data.id });
+                            showToast(`Order assigned & packing started`, "success");
+                        } catch (error: any) {
+                            console.error("Start packing error:", error);
+                            showToast(error.message || "Failed to assign order", "error");
+                        }
+                    } else {
+                        showToast(`Order loaded: #${data.id.slice(-8)}`, "success");
+                    }
                 }
             } else {
                 showToast(`Order not found: ${finalId}`, "error");
@@ -261,11 +261,10 @@ export default function PackingModePage() {
     };
 
     const verifyRack = (rackId: string) => {
-        const cleanRack = rackId.replace(/^RACK-/i, 'RACK-'); // Ensure format
+        const cleanRack = rackId.replace(/^RACK-/i, 'RACK-');
         setScannedRack(cleanRack);
 
         if (currentOrder) {
-            // Check if any items belong to this rack
             const relevantItems = currentOrder.items.filter(item => item.rackId === cleanRack);
             if (relevantItems.length > 0) {
                 setVerifiedRacks(prev => new Set(prev).add(cleanRack));
@@ -284,10 +283,9 @@ export default function PackingModePage() {
             return;
         }
 
-        // Find item matching productCode or legacy ID or Name
         const itemIndex = currentOrder.items.findIndex(item =>
             (item.productCode && item.productCode === code) ||
-            (item.bookId === code) // Fallback for legacy
+            (item.bookId === code)
         );
 
         if (itemIndex === -1) {
@@ -300,13 +298,11 @@ export default function PackingModePage() {
         const newQty = currentVerified + 1;
 
         if (currentVerified < item.quantity) {
-            // Update local state immediately for responsiveness
             setVerifiedItems(prev => ({
                 ...prev,
                 [item.bookId]: newQty
             }));
 
-            // Phase 25: Update Firestore for bi-directional sync with mobile
             try {
                 const docRef = doc(db, "granthalaya_app", "orders_module", "orders", currentOrder.id);
                 await updateDoc(docRef, {
@@ -330,26 +326,25 @@ export default function PackingModePage() {
 
         setLoading(true);
         try {
-            const docRef = doc(db, "granthalaya_app", "orders_module", "orders", currentOrder.id);
-            await updateDoc(docRef, {
-                deliveryStatus: 'packed',
-                status: 'packed',
-                updatedAt: serverTimestamp(),
-                packedBy: user?.uid || 'admin',
-                deliveryTimeline: arrayUnion({
-                    status: 'packed',
-                    at: new Date(),
-                    by: user?.uid || "admin",
-                    note: "Verified via Packing Mode"
-                })
+            const commitPackingFn = httpsCallable(functions, 'granthalayaCommitPacking');
+            const res = await commitPackingFn({
+                orderId: currentOrder.id,
+                packedItems: Object.entries(verifiedItems).map(([bookId, quantity]) => ({
+                    productId: bookId,
+                    quantity
+                }))
             });
 
-            showToast("Order marked as PACKED!", "success");
-            router.push("/admin/books/orders"); // Return to list
+            if ((res.data as any).success) {
+                showToast("Order marked as PACKED!", "success");
+                router.push(`/${locale}/admin/books/orders`);
+            } else {
+                showToast((res.data as any).message || "Failed to commit packing", "error");
+            }
 
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            showToast("Failed to update status", "error");
+            showToast(error.message || "Failed to update status", "error");
         } finally {
             setLoading(false);
         }
@@ -439,7 +434,6 @@ export default function PackingModePage() {
                                         </button>
                                     </div>
 
-                                    {/* Live Suggestions Dropdown */}
                                     {showSuggestions && searchSuggestions.length > 0 && (
                                         <div className={`absolute top-full left-4 right-4 mt-2 p-2 rounded-2xl border shadow-xl z-50 animate-in fade-in slide-in-from-top-2 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
                                             {searchSuggestions.map(order => (
@@ -464,12 +458,10 @@ export default function PackingModePage() {
                                 </div>
                             </div>
 
-                            {/* Recent Orders Section */}
                             <RecentOrders onSelect={fetchOrder} isDark={isDark} />
                         </div>
                     ) : (
                         <>
-                            {/* Order Context */}
                             <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-2xl border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
                                 <div>
                                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Customer</label>
@@ -487,7 +479,6 @@ export default function PackingModePage() {
                                 </div>
                             </div>
 
-                            {/* Scanned Rack Context */}
                             {scannedRack && (
                                 <div className="bg-blue-500/10 border border-blue-500/20 text-blue-600 p-3 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
                                     <Maximize2 className="w-5 h-5" />
@@ -495,7 +486,6 @@ export default function PackingModePage() {
                                 </div>
                             )}
 
-                            {/* Items List */}
                             <div className="space-y-3">
                                 {currentOrder.items.map((item, idx) => {
                                     const verifiedQty = verifiedItems[item.bookId] || 0;
@@ -560,7 +550,6 @@ export default function PackingModePage() {
                                 })}
                             </div>
 
-                            {/* Actions */}
                             <div className="pt-4 flex gap-4">
                                 <button
                                     onClick={handleCompletePacking}
@@ -579,7 +568,6 @@ export default function PackingModePage() {
                 </div>
             </div>
 
-            {/* Status Bar */}
             <div className={`py-2 px-4 text-[10px] uppercase font-bold text-center tracking-widest ${isDark ? 'bg-slate-900 text-slate-600' : 'bg-slate-100 text-slate-400'}`}>
                 System Ready • Connect USB Scanner • Focus Mode Active
             </div>
@@ -594,7 +582,6 @@ function RecentOrders({ onSelect, isDark }: { onSelect: (id: string) => void, is
     useEffect(() => {
         const loadRecent = async () => {
             try {
-                // Fetch the most recent PLACED orders
                 const q = query(
                     collection(db, "granthalaya_app", "orders_module", "orders"),
                     where("status", "==", "placed"),
@@ -635,8 +622,7 @@ function RecentOrders({ onSelect, isDark }: { onSelect: (id: string) => void, is
                     <button
                         key={order.id}
                         onClick={() => onSelect(order.id)}
-                        className={`p-4 rounded-2xl border text-left transition-all group ${isDark ? 'bg-slate-900 border-slate-800 hover:border-orange-500/50' : 'bg-white border-slate-200 hover:border-orange-200 shadow-sm'
-                            }`}
+                        className={`p-4 rounded-2xl border text-left transition-all group ${isDark ? 'bg-slate-900 border-slate-800 hover:border-orange-500/50' : 'bg-white border-slate-200 hover:border-orange-200 shadow-sm'}`}
                     >
                         <div className="flex justify-between items-start mb-1">
                             <span className="font-bold text-sm font-mono group-hover:text-orange-500 transition-colors">

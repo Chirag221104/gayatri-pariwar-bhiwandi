@@ -147,12 +147,12 @@ export default function ResourceForm({ initialData, onCancel }: ResourceFormProp
     };
 
     const inputClasses = `w-full rounded-2xl py-4 px-5 outline-none transition-all focus:ring-2 focus:ring-orange-500/50 ${isDark
-            ? 'bg-slate-900 border-none text-white placeholder:text-slate-500'
+            ? 'bg-zinc-950 border-none text-white placeholder:text-slate-500'
             : 'bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-500'
         }`;
 
     return (
-        <form onSubmit={handleSubmit} className={`flex flex-col h-full border-t animate-in slide-in-from-bottom-5 duration-300 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'
+        <form onSubmit={handleSubmit} className={`flex flex-col h-full border-t animate-in slide-in-from-bottom-5 duration-300 ${isDark ? 'bg-zinc-950 border-slate-800' : 'bg-slate-50 border-slate-200'
             }`}>
             <div className="flex-1 overflow-y-auto p-8">
                 <div className="max-w-4xl mx-auto space-y-10">
@@ -175,7 +175,7 @@ export default function ResourceForm({ initialData, onCancel }: ResourceFormProp
                                     {isDeleting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
                                 </button>
                             )}
-                            <button type="button" onClick={onCancel} className={`p-3 rounded-2xl transition-colors ${isDark ? 'text-slate-500 hover:bg-slate-800' : 'text-slate-400 hover:bg-slate-200'
+                            <button type="button" onClick={onCancel} className={`p-3 rounded-2xl transition-colors ${isDark ? 'text-slate-500 hover:bg-zinc-900' : 'text-slate-400 hover:bg-slate-200'
                                 }`}>
                                 <X className="w-6 h-6" />
                             </button>
@@ -184,7 +184,7 @@ export default function ResourceForm({ initialData, onCancel }: ResourceFormProp
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                         <div className="lg:col-span-2 space-y-6">
-                            <div className={`p-6 rounded-3xl border space-y-6 ${isDark ? 'bg-slate-800/20 border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'
+                            <div className={`p-6 rounded-3xl border space-y-6 ${isDark ? 'bg-zinc-900/20 border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'
                                 }`}>
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Knowledge Title</label>
@@ -212,7 +212,7 @@ export default function ResourceForm({ initialData, onCancel }: ResourceFormProp
                             </div>
 
                             <div className="grid grid-cols-2 gap-6">
-                                <div className={`p-6 rounded-3xl border space-y-4 ${isDark ? 'bg-slate-800/20 border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'
+                                <div className={`p-6 rounded-3xl border space-y-4 ${isDark ? 'bg-zinc-900/20 border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'
                                     }`}>
                                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                         <LinkIcon className="w-3 h-3 text-blue-500" /> Resource Content
@@ -243,7 +243,7 @@ export default function ResourceForm({ initialData, onCancel }: ResourceFormProp
                                     </div>
                                 </div>
 
-                                <div className={`p-6 rounded-3xl border space-y-4 ${isDark ? 'bg-slate-800/20 border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'
+                                <div className={`p-6 rounded-3xl border space-y-4 ${isDark ? 'bg-zinc-900/20 border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'
                                     }`}>
                                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                         <ImageIcon className="w-3 h-3 text-emerald-500" /> Thumbnail
@@ -278,7 +278,7 @@ export default function ResourceForm({ initialData, onCancel }: ResourceFormProp
                         </div>
 
                         <div className="space-y-6">
-                            <div className={`p-6 rounded-3xl border space-y-6 ${isDark ? 'bg-slate-800/30 border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'
+                            <div className={`p-6 rounded-3xl border space-y-6 ${isDark ? 'bg-zinc-900/30 border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'
                                 }`}>
                                 <div className="space-y-3">
                                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Type</label>
@@ -291,7 +291,7 @@ export default function ResourceForm({ initialData, onCancel }: ResourceFormProp
                                                 className={`flex items-center gap-3 p-3 rounded-xl text-sm font-bold transition-all border ${type === t
                                                         ? "bg-orange-500 border-orange-400 text-white shadow-lg shadow-orange-500/20"
                                                         : isDark
-                                                            ? "bg-slate-900 border-slate-800 text-slate-500 hover:text-slate-300"
+                                                            ? "bg-zinc-950 border-slate-800 text-slate-500 hover:text-slate-300"
                                                             : "bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900"
                                                     }`}
                                             >
@@ -314,7 +314,7 @@ export default function ResourceForm({ initialData, onCancel }: ResourceFormProp
                                         value={category}
                                         onChange={(e) => setCategory(e.target.value)}
                                         className={`w-full rounded-xl py-3 px-4 outline-none appearance-none cursor-pointer ${isDark
-                                                ? 'bg-slate-900 border-none text-slate-200'
+                                                ? 'bg-zinc-950 border-none text-slate-200'
                                                 : 'bg-white border border-slate-200 text-slate-900'
                                             }`}
                                     >
@@ -335,7 +335,7 @@ export default function ResourceForm({ initialData, onCancel }: ResourceFormProp
                                                 className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${status === s
                                                         ? "bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/20"
                                                         : isDark
-                                                            ? "bg-slate-900 border-slate-800 text-slate-600 hover:text-slate-400"
+                                                            ? "bg-zinc-950 border-slate-800 text-slate-600 hover:text-slate-400"
                                                             : "bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-600"
                                                     }`}
                                             >
@@ -350,13 +350,13 @@ export default function ResourceForm({ initialData, onCancel }: ResourceFormProp
                 </div>
             </div>
 
-            <div className={`p-8 backdrop-blur-xl border-t z-30 ${isDark ? 'bg-slate-900/90 border-white/5' : 'bg-white/90 border-slate-200'
+            <div className={`p-8 backdrop-blur-xl border-t z-30 ${isDark ? 'bg-zinc-950/90 border-white/5' : 'bg-white/90 border-slate-200'
                 }`}>
                 <div className="max-w-4xl mx-auto flex gap-4">
                     <button
                         type="button"
                         onClick={onCancel}
-                        className={`flex-1 px-10 py-4 rounded-2xl font-bold transition-all ${isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                        className={`flex-1 px-10 py-4 rounded-2xl font-bold transition-all ${isDark ? 'bg-zinc-900 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
                             }`}
                     >
                         Back to Library

@@ -19,6 +19,7 @@ interface AdminTableProps<T> {
     searchPlaceholder?: string;
     searchValue?: string;
     onSearchChange?: (value: string) => void;
+    hideControls?: boolean;
 }
 
 export default function AdminTable<T extends { id: string }>({
@@ -31,6 +32,7 @@ export default function AdminTable<T extends { id: string }>({
     searchPlaceholder = "Search...",
     searchValue,
     onSearchChange,
+    hideControls = false,
     selectable = false,
     selectedIds,
     onSelectionChange
@@ -58,46 +60,36 @@ export default function AdminTable<T extends { id: string }>({
     }, []);
 
     return (
-        <div className={`rounded-xl overflow-hidden flex flex-col h-full border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'
-            }`}>
+        <div className={`flex flex-col h-full overflow-hidden rounded-2xl border transition-all duration-300
+            ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-200 shadow-sm'}`}>
             {/* Table Controls */}
-            <div className={`p-4 border-b flex flex-col sm:flex-row items-center justify-between gap-4 ${isDark ? 'border-slate-700 bg-slate-800/50' : 'border-slate-200 bg-slate-50'
-                }`}>
-                <div className="relative w-full sm:max-w-xs">
-                    <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-slate-500' : 'text-slate-400'
-                        }`} />
-                    <input
-                        type="text"
-                        placeholder={searchPlaceholder}
-                        value={searchValue}
-                        onChange={(e) => onSearchChange?.(e.target.value)}
-                        className={`w-full rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30 transition-all ${isDark
-                            ? 'bg-slate-700 border-slate-600 text-slate-200 placeholder:text-slate-500'
-                            : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 border'
-                            }`}
-                    />
+            {!hideControls && (
+                <div className={`p-4 border-b flex flex-col sm:flex-row items-center justify-between gap-4 ${isDark ? 'border-zinc-700 bg-zinc-800/50' : 'border-slate-200 bg-slate-50'
+                    }`}>
+                    <div className="relative w-full sm:max-w-xs">
+                        <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-zinc-500' : 'text-slate-400'
+                            }`} />
+                        <input
+                            type="text"
+                            placeholder={searchPlaceholder}
+                            value={searchValue}
+                            onChange={(e) => onSearchChange?.(e.target.value)}
+                            className={`w-full rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30 transition-all ${isDark
+                                ? 'bg-zinc-700 border-zinc-600 text-zinc-200 placeholder:text-zinc-500'
+                                : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 border'
+                                }`}
+                        />
+                    </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <button className={`p-2 rounded-lg transition-all focus:outline-none ${isDark
-                        ? 'bg-slate-700 hover:bg-slate-600 text-slate-400 hover:text-slate-200'
-                        : 'bg-white border border-slate-200 hover:bg-slate-100 text-slate-500 hover:text-slate-700'
-                        }`}>
-                        <Filter className="w-4 h-4" />
-                    </button>
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-lg ${isDark ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'
-                        }`}>
-                        {data.length} {data.length === 1 ? 'item' : 'items'}
-                    </span>
-                </div>
-            </div>
+            )}
 
             {/* Table Content */}
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-auto scrollbar-hide">
                 <table className="w-full text-left border-collapse min-w-[600px]">
                     <thead className="sticky top-0 z-10">
-                        <tr className={isDark ? 'bg-slate-800' : 'bg-slate-50'}>
+                        <tr className={isDark ? 'bg-zinc-800' : 'bg-slate-50'}>
                             {selectable && (
-                                <th className={`px-6 py-3 w-10 border-b ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
+                                <th className={`px-6 py-3 w-10 border-b ${isDark ? 'border-zinc-700' : 'border-slate-200'}`}>
                                     <input
                                         type="checkbox"
                                         checked={data.length > 0 && selectedIds?.size === data.length}
@@ -116,30 +108,30 @@ export default function AdminTable<T extends { id: string }>({
                                 <th
                                     key={idx}
                                     className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider border-b ${isDark
-                                        ? 'text-slate-400 border-slate-700'
+                                        ? 'text-zinc-400 border-zinc-700'
                                         : 'text-slate-500 border-slate-200'
                                         } ${col.className || ""}`}
                                 >
                                     {col.header}
                                 </th>
                             ))}
-                            <th className={`px-6 py-3 w-10 border-b ${isDark ? 'border-slate-700' : 'border-slate-200'}`}></th>
+                            <th className={`px-6 py-3 w-10 border-b ${isDark ? 'border-zinc-700' : 'border-slate-200'}`}></th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
                             [1, 2, 3, 4, 5].map((i) => (
-                                <tr key={i} className={`animate-pulse border-b ${isDark ? 'border-slate-700/50' : 'border-slate-100'
+                                <tr key={i} className={`animate-pulse border-b transition-colors ${isDark ? 'border-zinc-800 bg-zinc-900/50' : 'border-slate-100 bg-slate-50/50'
                                     }`}>
                                     {selectable && <td className="px-6 py-4"></td>}
                                     {columns.map((_, idx) => (
                                         <td key={idx} className="px-6 py-4">
-                                            <div className={`h-4 rounded w-3/4 ${isDark ? 'bg-slate-700' : 'bg-slate-200'
+                                            <div className={`h-4 rounded w-3/4 ${isDark ? 'bg-zinc-700' : 'bg-slate-200'
                                                 }`}></div>
                                         </td>
                                     ))}
                                     <td className="px-6 py-4">
-                                        <div className={`h-4 w-4 rounded ${isDark ? 'bg-slate-700' : 'bg-slate-200'
+                                        <div className={`h-4 w-4 rounded ${isDark ? 'bg-zinc-700' : 'bg-slate-200'
                                             }`}></div>
                                     </td>
                                 </tr>
@@ -150,7 +142,7 @@ export default function AdminTable<T extends { id: string }>({
                                     key={item.id}
                                     onClick={() => onRowClick?.(item)}
                                     className={`group cursor-pointer transition-colors border-b ${isDark
-                                        ? 'hover:bg-slate-700/50 border-slate-700/50'
+                                        ? 'hover:bg-zinc-700/50 border-zinc-700/50'
                                         : 'hover:bg-slate-50 border-slate-100'
                                         }`}
                                     tabIndex={0}
@@ -175,7 +167,7 @@ export default function AdminTable<T extends { id: string }>({
                                         </td>
                                     )}
                                     {columns.map((col, idx) => (
-                                        <td key={idx} className={`px-6 py-4 text-sm ${isDark ? 'text-slate-300' : 'text-[#B56550]'
+                                        <td key={idx} className={`px-6 py-4 text-sm ${isDark ? 'text-zinc-300' : 'text-[#B56550]'
                                             } ${col.className || ""}`}>
                                             {typeof col.accessor === "function"
                                                 ? col.accessor(item)
@@ -184,7 +176,7 @@ export default function AdminTable<T extends { id: string }>({
                                     ))}
                                     <td className="px-6 py-4 text-right">
                                         <ChevronRight className={`w-4 h-4 transition-all ${isDark
-                                            ? 'text-slate-600 group-hover:text-orange-400'
+                                            ? 'text-zinc-600 group-hover:text-orange-400'
                                             : 'text-slate-400 group-hover:text-orange-500'
                                             }`} />
                                     </td>
@@ -194,14 +186,14 @@ export default function AdminTable<T extends { id: string }>({
                             <tr>
                                 <td colSpan={columns.length + 1} className="px-6 py-16">
                                     <div className="flex flex-col items-center justify-center text-center">
-                                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-4 ${isDark ? 'bg-slate-700' : 'bg-slate-100'
+                                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-4 ${isDark ? 'bg-zinc-700' : 'bg-slate-100'
                                             }`}>
-                                            <Inbox className={`w-7 h-7 ${isDark ? 'text-slate-500' : 'text-slate-400'
+                                            <Inbox className={`w-7 h-7 ${isDark ? 'text-zinc-500' : 'text-slate-400'
                                                 }`} />
                                         </div>
-                                        <p className={`text-sm font-medium mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'
+                                        <p className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-zinc-500' : 'text-slate-500'
                                             }`}>{emptyMessage}</p>
-                                        <p className={`text-xs max-w-xs ${isDark ? 'text-slate-600' : 'text-slate-400'
+                                        <p className={`text-xs max-w-xs ${isDark ? 'text-zinc-600' : 'text-slate-400'
                                             }`}>{emptySubtext}</p>
                                     </div>
                                 </td>
@@ -210,6 +202,6 @@ export default function AdminTable<T extends { id: string }>({
                     </tbody>
                 </table>
             </div>
-        </div>
+        </div >
     );
 }

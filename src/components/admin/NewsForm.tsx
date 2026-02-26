@@ -290,6 +290,7 @@ export default function NewsForm({ initialData, onSave, onCancel, isSaving }: Ne
                                         value={scheduledDate}
                                         onChange={(e) => { setScheduledDate(e.target.value); setIsDirty(true); }}
                                         className={inputClasses}
+                                        style={{ colorScheme: isDark ? 'dark' : 'light' }}
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -299,6 +300,7 @@ export default function NewsForm({ initialData, onSave, onCancel, isSaving }: Ne
                                         value={scheduledTime}
                                         onChange={(e) => { setScheduledTime(e.target.value); setIsDirty(true); }}
                                         className={inputClasses}
+                                        style={{ colorScheme: isDark ? 'dark' : 'light' }}
                                     />
                                 </div>
                             </div>

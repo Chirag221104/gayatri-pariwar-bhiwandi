@@ -80,20 +80,20 @@ export default function MantraForm({ initialData, onCancel }: MantraFormProps) {
     };
 
     return (
-        <div className="flex flex-col h-full bg-white">
+        <div className="flex flex-col h-full bg-white dark:bg-zinc-900">
             {/* Header */}
-            <div className="p-6 border-b border-slate-200 flex items-center gap-4 sticky top-0 bg-white z-10">
+            <div className="p-6 border-b border-slate-200 dark:border-zinc-800 flex items-center gap-4 sticky top-0 bg-white dark:bg-zinc-950 z-10">
                 <button
                     onClick={onCancel}
-                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                    className="p-2 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
                 >
-                    <ArrowLeft className="w-5 h-5 text-slate-500" />
+                    <ArrowLeft className="w-5 h-5 text-slate-500 dark:text-slate-400" />
                 </button>
                 <div>
-                    <h2 className="text-xl font-bold text-slate-900">
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                         {initialData ? "Edit Global Mantra" : "New Global Mantra"}
                     </h2>
-                    <p className="text-sm text-slate-500">Configure mantra details for global tracking</p>
+                    <p className="text-sm text-slate-500 dark:text-zinc-400">Configure mantra details for global tracking</p>
                 </div>
             </div>
 
@@ -101,14 +101,14 @@ export default function MantraForm({ initialData, onCancel }: MantraFormProps) {
             <div className="flex-1 overflow-y-auto p-6 md:p-8">
                 <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-8">
                     {/* Basic Info Card */}
-                    <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6">
-                        <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
-                                <Music className="w-5 h-5 text-slate-600" />
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 border border-slate-200 dark:border-zinc-800 shadow-sm space-y-6">
+                        <div className="flex items-center gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
+                                <Music className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                             </div>
                             <div>
-                                <h3 className="font-bold text-lg text-slate-900">Mantra Details</h3>
-                                <p className="text-xs text-slate-500">Essential information about the mantra</p>
+                                <h3 className="font-bold text-lg text-slate-900 dark:text-white">Mantra Details</h3>
+                                <p className="text-xs text-slate-500 dark:text-zinc-400">Essential information about the mantra</p>
                             </div>
                         </div>
 
@@ -126,7 +126,7 @@ export default function MantraForm({ initialData, onCancel }: MantraFormProps) {
                                 value={formData.description}
                                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, description: e.target.value })}
                                 rows={4}
-                                className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all resize-none"
+                                className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all resize-none"
                                 placeholder="Enter the mantra text or meaning..."
                             />
                         </div>
@@ -154,7 +154,7 @@ export default function MantraForm({ initialData, onCancel }: MantraFormProps) {
                         <button
                             type="button"
                             onClick={onCancel}
-                            className="px-6 py-3 rounded-xl text-slate-600 font-semibold hover:bg-slate-100 transition-colors"
+                            className="px-6 py-3 rounded-xl text-slate-600 dark:text-zinc-400 font-semibold hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
                         >
                             Cancel
                         </button>

@@ -54,7 +54,7 @@ export default function BooksInventoryPage() {
     }, []);
 
     useEffect(() => {
-        const q = query(collection(db, "granthalaya_app", "inventory", "books"), orderBy("title", "asc"));
+        const q = query(collection(db, "granthalaya_app", "inventory", "books"), orderBy("productCode", "asc"));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const booksData = snapshot.docs.map(doc => ({
@@ -72,12 +72,14 @@ export default function BooksInventoryPage() {
     }, []);
 
     const filteredBooks = books.filter(book => {
-        const matchesSearch = (book.productCode || "").toLowerCase().includes(search.toLowerCase()) ||
-            (book.name || book.title || "").toLowerCase().includes(search.toLowerCase()) ||
-            (book.author || book.metadata?.author || "").toLowerCase().includes(search.toLowerCase()) ||
-            book.category.toLowerCase().includes(search.toLowerCase());
+        const searchLower = search.toLowerCase();
+        const matchesSearch =
+            (book.productCode || "").toLowerCase().includes(searchLower) ||
+            (book.name || book.title || "").toLowerCase().includes(searchLower) ||
+            (book.author || book.metadata?.author || "").toLowerCase().includes(searchLower) ||
+            (book.category || "").toLowerCase().includes(searchLower);
 
-        const matchesType = selectedType === "ALL" || book.type === selectedType;
+        const matchesType = selectedType === "ALL" || (book.type && book.type === selectedType);
 
         return matchesSearch && matchesType;
     });
@@ -222,8 +224,8 @@ export default function BooksInventoryPage() {
                     searchPlaceholder="Search by title, author, or category..."
                     searchValue={search}
                     onSearchChange={setSearch}
-                    emptyMessage="No books found in inventory."
-                    emptySubtext="Add your first spiritual title to start selling."
+                    emptyMessage="No products found in inventory."
+                    emptySubtext="Add products or check your filters to start managing collection."
                     onRowClick={(item) => {
                         window.location.href = `/${locale}/admin/books/${item.id}`;
                     }}

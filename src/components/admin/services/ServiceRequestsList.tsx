@@ -34,6 +34,7 @@ import {
 import AdminTable from "@/components/admin/AdminTable";
 import { logAdminAction } from "@/lib/admin-logger";
 import { useToast } from "@/components/ui/Toast";
+import StatusBadge from "@/components/ui/StatusBadge";
 
 interface StatusHistoryEntry {
     status: string;
@@ -221,16 +222,10 @@ export default function ServiceRequestsList() {
         {
             header: "Status",
             accessor: (item: ServiceRequest) => (
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${item.status === 'pending'
-                    ? isDark ? "bg-orange-500/10 text-orange-500" : "bg-orange-50 text-orange-600"
-                    : item.status === 'accepted'
-                        ? isDark ? "bg-blue-500/10 text-blue-500" : "bg-blue-50 text-blue-600"
-                        : item.status === 'completed'
-                            ? isDark ? "bg-emerald-500/10 text-emerald-500" : "bg-emerald-50 text-emerald-600"
-                            : isDark ? "bg-slate-800 text-slate-500" : "bg-slate-100 text-slate-500"
-                    }`}>
-                    {item.status}
-                </span>
+                <StatusBadge
+                    variant={item.status as any}
+                    className="shadow-sm"
+                />
             )
         }
     ];
@@ -279,6 +274,7 @@ export default function ServiceRequestsList() {
                     columns={columns}
                     data={filteredRequests}
                     loading={loading}
+                    hideControls={true}
                     onRowClick={(item) => setSelectedRequest(item)}
                     emptyMessage="No service requests found."
                 />

@@ -310,6 +310,7 @@ export default function EventForm({ initialData, onSave, onCancel, isSaving }: E
                                         onChange={(e) => { setEventDate(e.target.value); setIsDirty(true); }}
                                         required
                                         className={`${inputClasses} pl-10`}
+                                        style={{ colorScheme: isDark ? 'dark' : 'light' }}
                                     />
                                 </div>
                             </div>
@@ -321,6 +322,7 @@ export default function EventForm({ initialData, onSave, onCancel, isSaving }: E
                                     onChange={(e) => { setEventTime(e.target.value); setIsDirty(true); }}
                                     required
                                     className={inputClasses}
+                                    style={{ colorScheme: isDark ? 'dark' : 'light' }}
                                 />
                             </div>
                         </div>
