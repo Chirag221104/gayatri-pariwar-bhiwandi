@@ -228,18 +228,18 @@ export default function EventForm({ initialData, onSave, onCancel, isSaving }: E
     ).slice(0, 5);
 
     const inputClasses = `w-full rounded-xl py-3 px-4 outline-none transition-all focus:ring-2 focus:ring-orange-500/50 ${isDark
-        ? 'bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-slate-500'
+        ? 'bg-zinc-950 border border-zinc-800 text-white placeholder:text-zinc-600 focus:bg-zinc-900/50'
         : 'bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-500'
         }`;
 
-    const labelClasses = `text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'
+    const labelClasses = `text-xs font-bold uppercase tracking-wider ${isDark ? 'text-zinc-500' : 'text-slate-500'
         }`;
 
-    const cardClasses = `p-6 rounded-2xl space-y-4 border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+    const cardClasses = `p-6 rounded-2xl space-y-4 border ${isDark ? 'bg-zinc-900/50 backdrop-blur-xl border-zinc-800' : 'bg-white border-slate-200 shadow-sm'
         }`;
 
     const selectClasses = `w-full rounded-xl py-3 px-4 outline-none transition-all focus:ring-2 focus:ring-orange-500/50 appearance-none cursor-pointer ${isDark
-        ? 'bg-slate-800/50 border border-slate-700/50 text-white'
+        ? 'bg-zinc-950 border border-zinc-800 text-white focus:bg-zinc-900/50'
         : 'bg-white border border-slate-200 text-slate-900 focus:border-orange-500'
         }`;
 

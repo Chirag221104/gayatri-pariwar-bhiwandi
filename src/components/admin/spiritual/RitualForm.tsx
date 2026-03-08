@@ -5,10 +5,11 @@ import {
     X, Save, Plus, Trash2, GripVertical,
     Music, Video, Play, Pause, ChevronDown,
     ChevronRight, Languages, Clock, AlertCircle,
-    Flame, ArrowUp, ArrowDown
+    Flame, ArrowUp, ArrowDown, Upload, Loader2
 } from "lucide-react";
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import { doc, setDoc, addDoc, collection, updateDoc, serverTimestamp } from "firebase/firestore";
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
 import { logAdminAction } from "@/lib/admin-logger";
 
 interface RitualSegment {
@@ -127,6 +128,68 @@ export default function RitualForm({ initialData, onCancel }: RitualFormProps) {
     const [isDark, setIsDark] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [currentTime, setCurrentTime] = useState(0);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [hoverTime, setHoverTime] = useState<number | null>(null);
+    const progressBarRef = useRef<HTMLDivElement>(null);
+    const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const mediaInputRef = useRef<HTMLInputElement>(null);
+    const [showDeleteMedia, setShowDeleteMedia] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [pendingFile, setPendingFile] = useState<File | null>(null);
+    const [localPreviewUrl, setLocalPreviewUrl] = useState<string>('');
+
+    // Cleanup object URL on unmount or when file changes
+    useEffect(() => {
+        return () => {
+            if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
+        };
+    }, [localPreviewUrl]);
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        // Revoke previous preview URL
+        if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
+        const previewUrl = URL.createObjectURL(file);
+        setPendingFile(file);
+        setLocalPreviewUrl(previewUrl);
+        // Clear the existing firebase URL since we have a new local file
+        setFormData(p => ({ ...p, mediaUrl: '' }));
+        if (mediaInputRef.current) mediaInputRef.current.value = '';
+    };
+
+    const handleDeleteMedia = async () => {
+        setDeleting(true);
+        try {
+            // If there's a Firebase URL, delete from storage
+            if (formData.mediaUrl && formData.mediaUrl.includes('firebasestorage')) {
+                const url = new URL(formData.mediaUrl);
+                const pathMatch = url.pathname.match(/\/o\/(.+?)(?:\?|$)/);
+                if (pathMatch) {
+                    const storagePath = decodeURIComponent(pathMatch[1]);
+                    const fileRef = ref(storage, storagePath);
+                    await deleteObject(fileRef);
+                }
+            }
+        } catch (error) {
+            console.error('Error deleting media file:', error);
+        } finally {
+            // Clear everything
+            setFormData(p => ({ ...p, mediaUrl: '', duration: 0 }));
+            if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
+            setLocalPreviewUrl('');
+            setPendingFile(null);
+            if (mediaInputRef.current) mediaInputRef.current.value = '';
+            if (audioRef.current) {
+                audioRef.current.pause();
+                setIsPlaying(false);
+                setCurrentTime(0);
+            }
+            setDeleting(false);
+            setShowDeleteMedia(false);
+        }
+    };
 
     useEffect(() => {
         const checkDark = () => {
@@ -149,8 +212,41 @@ export default function RitualForm({ initialData, onCancel }: RitualFormProps) {
     const handleSave = async () => {
         setLoading(true);
         try {
+            let mediaUrl = formData.mediaUrl;
+
+            // Upload pending file to Firebase Storage first
+            if (pendingFile) {
+                setUploading(true);
+                setUploadProgress(0);
+                const folder = formData.mediaType === 'video' ? 'rituals/videos' : 'rituals/audios';
+                const timestamp = Date.now();
+                const filename = `${timestamp}_${pendingFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+                const storageRef = ref(storage, `${folder}/${filename}`);
+
+                const uploadTask = uploadBytesResumable(storageRef, pendingFile);
+
+                mediaUrl = await new Promise<string>((resolve, reject) => {
+                    uploadTask.on('state_changed',
+                        (snapshot) => {
+                            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                            setUploadProgress(progress);
+                        },
+                        (error) => reject(error),
+                        async () => {
+                            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                            resolve(downloadURL);
+                        }
+                    );
+                });
+                setUploading(false);
+                setPendingFile(null);
+                if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
+                setLocalPreviewUrl('');
+            }
+
             const dataToSave = {
                 ...formData,
+                mediaUrl,
                 updatedAt: serverTimestamp(),
                 createdAt: initialData?.id ? initialData.createdAt : serverTimestamp()
             };
@@ -175,6 +271,7 @@ export default function RitualForm({ initialData, onCancel }: RitualFormProps) {
             onCancel();
         } catch (error) {
             console.error("Error saving ritual:", error);
+            setUploading(false);
         } finally {
             setLoading(false);
         }
@@ -278,46 +375,94 @@ export default function RitualForm({ initialData, onCancel }: RitualFormProps) {
             </div>
 
             {/* Sticky Player Bar */}
-            <div className={`p-4 flex items-center justify-between sticky top-[80px] z-20 shadow-xl border-y ${isDark ? 'bg-zinc-900 text-white border-zinc-800' : 'bg-slate-800 text-white border-slate-700'
+            <div className={`p-4 flex items-center justify-between sticky top-[80px] z-20 shadow-xl border-y ${isDark ? 'bg-zinc-900 text-white border-zinc-800' : 'bg-white text-slate-900 border-slate-200'
                 }`}>
                 <div className="flex items-center gap-6 flex-1 max-w-4xl mx-auto">
                     <div className="flex items-center gap-3">
                         <button
-                            onClick={() => audioRef.current?.paused ? audioRef.current.play() : audioRef.current?.pause()}
-                            className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center hover:bg-orange-600 transition-all shrink-0 active:scale-90"
+                            onClick={() => {
+                                if (!audioRef.current) return;
+                                if (audioRef.current.paused) {
+                                    audioRef.current.play();
+                                } else {
+                                    audioRef.current.pause();
+                                }
+                            }}
+                            className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center hover:bg-orange-600 transition-all shrink-0 active:scale-90 text-white"
                         >
-                            <Play className="w-5 h-5 fill-current" />
+                            {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current" />}
                         </button>
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">Live Preview</span>
-                            <span className="text-sm font-mono text-orange-400">{formatTime(currentTime)}</span>
+                            <span className={`text-[10px] font-bold uppercase ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Live Preview</span>
+                            <span className="text-sm font-mono text-orange-500">{formatTime(currentTime)}</span>
                         </div>
                     </div>
 
-                    <div className="flex-1 h-1.5 bg-slate-800 rounded-full relative group cursor-pointer overflow-hidden">
+                    <div
+                        ref={progressBarRef}
+                        className={`flex-1 h-2 rounded-full relative group cursor-pointer overflow-visible ${isDark ? 'bg-zinc-800' : 'bg-slate-200'}`}
+                        onClick={(e) => {
+                            if (!audioRef.current || !progressBarRef.current) return;
+                            const rect = progressBarRef.current.getBoundingClientRect();
+                            const x = e.clientX - rect.left;
+                            const pct = Math.max(0, Math.min(1, x / rect.width));
+                            audioRef.current.currentTime = pct * (formData.duration || 0);
+                            setCurrentTime(audioRef.current.currentTime);
+                        }}
+                        onMouseMove={(e) => {
+                            if (!progressBarRef.current) return;
+                            const rect = progressBarRef.current.getBoundingClientRect();
+                            const x = e.clientX - rect.left;
+                            const pct = Math.max(0, Math.min(1, x / rect.width));
+                            setHoverTime(pct * (formData.duration || 0));
+                        }}
+                        onMouseLeave={() => setHoverTime(null)}
+                    >
                         <div
-                            className="absolute inset-y-0 left-0 bg-orange-500 transition-all duration-100"
+                            className="absolute inset-y-0 left-0 bg-orange-500 rounded-full transition-all duration-100"
                             style={{ width: `${(currentTime / (formData.duration || 1)) * 100}%` }}
                         />
+                        {/* Hover tooltip */}
+                        {hoverTime !== null && (
+                            <div
+                                className={`absolute -top-8 -translate-x-1/2 px-2 py-0.5 rounded text-[10px] font-mono whitespace-nowrap pointer-events-none z-30 ${isDark ? 'bg-zinc-700 text-white' : 'bg-slate-700 text-white'}`}
+                                style={{ left: `${(hoverTime / (formData.duration || 1)) * 100}%` }}
+                            >
+                                {formatTime(hoverTime)}
+                            </div>
+                        )}
+                        {/* Hover indicator line */}
+                        {hoverTime !== null && (
+                            <div
+                                className="absolute inset-y-0 w-0.5 bg-white/50 pointer-events-none"
+                                style={{ left: `${(hoverTime / (formData.duration || 1)) * 100}%` }}
+                            />
+                        )}
                     </div>
 
-                    <span className="text-sm font-mono text-slate-400">{formatTime(formData.duration)}</span>
+                    <span className={`text-sm font-mono ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{formatTime(formData.duration)}</span>
 
-                    {formData.mediaUrl && (
+                    {(formData.mediaUrl || localPreviewUrl) && (
                         formData.mediaType === 'audio' ? (
                             <audio
                                 ref={audioRef}
-                                src={formData.mediaUrl}
-                                onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                                onLoadedMetadata={(e) => setFormData(p => ({ ...p, duration: e.currentTarget.duration }))}
+                                src={localPreviewUrl || formData.mediaUrl}
+                                onTimeUpdate={(e) => { const t = e.currentTarget?.currentTime ?? 0; setCurrentTime(t); }}
+                                onLoadedMetadata={(e) => { const d = e.currentTarget?.duration ?? 0; setFormData(p => ({ ...p, duration: d })); }}
+                                onPlay={() => setIsPlaying(true)}
+                                onPause={() => setIsPlaying(false)}
+                                onEnded={() => setIsPlaying(false)}
                                 className="hidden"
                             />
                         ) : (
                             <video
                                 ref={audioRef as any}
-                                src={formData.mediaUrl}
-                                onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                                onLoadedMetadata={(e) => setFormData(p => ({ ...p, duration: e.currentTarget.duration }))}
+                                src={localPreviewUrl || formData.mediaUrl}
+                                onTimeUpdate={(e) => { const t = e.currentTarget?.currentTime ?? 0; setCurrentTime(t); }}
+                                onLoadedMetadata={(e) => { const d = e.currentTarget?.duration ?? 0; setFormData(p => ({ ...p, duration: d })); }}
+                                onPlay={() => setIsPlaying(true)}
+                                onPause={() => setIsPlaying(false)}
+                                onEnded={() => setIsPlaying(false)}
                                 className="hidden"
                             />
                         )
@@ -330,43 +475,117 @@ export default function RitualForm({ initialData, onCancel }: RitualFormProps) {
                 <section className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700 dark:text-zinc-300">Ritual Title</label>
+                            <label className={`text-sm font-bold ${isDark ? 'text-zinc-300' : 'text-slate-700'}`}>Ritual Title</label>
                             <input
                                 type="text"
                                 value={formData.title}
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                                 placeholder="e.g. Gayatri Yagya (Standard)"
-                                className="w-full px-4 py-3 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/20 transition-all dark:text-white"
+                                className={`w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-orange-500/20 transition-all ${isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'}`}
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700 dark:text-zinc-300">Media Type</label>
-                            <div className="flex p-1 bg-slate-100 dark:bg-zinc-800 rounded-xl w-fit">
+                            <label className={`text-sm font-bold ${isDark ? 'text-zinc-300' : 'text-slate-700'}`}>Media Type</label>
+                            <div className={`flex p-1 rounded-xl w-fit ${isDark ? 'bg-zinc-800' : 'bg-slate-100'}`}>
                                 <button
-                                    onClick={() => setFormData({ ...formData, mediaType: "audio" })}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${formData.mediaType === "audio" ? "bg-white dark:bg-zinc-700 shadow-sm text-orange-500" : "text-slate-500"}`}
+                                    onClick={() => setFormData({ ...formData, mediaType: "audio", mediaUrl: '' })}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${formData.mediaType === "audio" ? (isDark ? "bg-zinc-700 shadow-sm text-orange-500" : "bg-white shadow-sm text-orange-500") : "text-slate-500"}`}
                                 >
                                     <Music className="w-4 h-4" /> Audio
                                 </button>
                                 <button
-                                    onClick={() => setFormData({ ...formData, mediaType: "video" })}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${formData.mediaType === "video" ? "bg-white dark:bg-zinc-700 shadow-sm text-emerald-500" : "text-slate-500"}`}
+                                    onClick={() => setFormData({ ...formData, mediaType: "video", mediaUrl: '' })}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${formData.mediaType === "video" ? (isDark ? "bg-zinc-700 shadow-sm text-emerald-500" : "bg-white shadow-sm text-emerald-500") : "text-slate-500"}`}
                                 >
                                     <Video className="w-4 h-4" /> Video
+                                </button>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className={`text-sm font-bold ${isDark ? 'text-zinc-300' : 'text-slate-700'}`}>Status</label>
+                            <div className={`flex p-1 rounded-xl w-fit ${isDark ? 'bg-zinc-800' : 'bg-slate-100'}`}>
+                                <button
+                                    onClick={() => setFormData({ ...formData, status: "draft" })}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${formData.status === "draft" ? (isDark ? "bg-zinc-700 shadow-sm text-amber-500" : "bg-white shadow-sm text-amber-500") : "text-slate-500"}`}
+                                >
+                                    Draft
+                                </button>
+                                <button
+                                    onClick={() => setFormData({ ...formData, status: "published" })}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${formData.status === "published" ? (isDark ? "bg-zinc-700 shadow-sm text-emerald-500" : "bg-white shadow-sm text-emerald-500") : "text-slate-500"}`}
+                                >
+                                    Published
                                 </button>
                             </div>
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700 dark:text-zinc-300">Media URL</label>
+                        <label className={`text-sm font-bold ${isDark ? 'text-zinc-300' : 'text-slate-700'}`}>
+                            {formData.mediaType === 'audio' ? 'Upload Audio' : 'Upload Video'}
+                        </label>
                         <input
-                            type="text"
-                            value={formData.mediaUrl}
-                            onChange={(e) => setFormData({ ...formData, mediaUrl: e.target.value })}
-                            placeholder="https://firebasestorage.googleapis.com/..."
-                            className="w-full px-4 py-3 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-orange-500/20 transition-all dark:text-white font-mono text-xs"
+                            type="file"
+                            ref={mediaInputRef}
+                            onChange={handleFileSelect}
+                            accept={formData.mediaType === 'audio' ? 'audio/*' : 'video/*'}
+                            className="hidden"
                         />
+
+                        {(formData.mediaUrl || pendingFile) ? (
+                            <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${isDark ? 'bg-zinc-900 border-zinc-700' : 'bg-slate-50 border-slate-200'}`}>
+                                <div className={`p-2 rounded-lg ${formData.mediaType === 'audio' ? 'bg-orange-500/10 text-orange-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                    {formData.mediaType === 'audio' ? <Music className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className={`text-sm font-medium truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                        {pendingFile ? pendingFile.name : (formData.mediaType === 'audio' ? 'Audio file uploaded' : 'Video file uploaded')}
+                                    </p>
+                                    <p className={`text-xs truncate font-mono ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
+                                        {pendingFile
+                                            ? `${(pendingFile.size / (1024 * 1024)).toFixed(1)} MB · Will upload on save`
+                                            : formData.mediaUrl.split('/').pop()?.split('?')[0]
+                                        }
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDeleteMedia(true)}
+                                    className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => mediaInputRef.current?.click()}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-bold text-orange-500 hover:bg-orange-500/10 transition-colors"
+                                >
+                                    Replace
+                                </button>
+                            </div>
+                        ) : (
+                            <div
+                                onClick={() => mediaInputRef.current?.click()}
+                                className={`p-6 rounded-xl border-2 border-dashed cursor-pointer group transition-all ${isDark
+                                    ? 'border-zinc-700 hover:border-zinc-500 hover:bg-zinc-900/50'
+                                    : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50'
+                                    }`}
+                            >
+                                <div className="flex flex-col items-center gap-3 text-center">
+                                    <div className={`p-3 rounded-full transition-colors ${isDark ? 'bg-zinc-900 group-hover:bg-zinc-800' : 'bg-slate-100 group-hover:bg-slate-200'}`}>
+                                        <Upload className={`w-6 h-6 ${isDark ? 'text-zinc-400' : 'text-slate-500'}`} />
+                                    </div>
+                                    <div>
+                                        <p className={`text-sm font-medium ${isDark ? 'text-zinc-300' : 'text-slate-700'}`}>
+                                            Click to upload {formData.mediaType === 'audio' ? 'audio' : 'video'}
+                                        </p>
+                                        <p className={`text-xs mt-1 ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>
+                                            {formData.mediaType === 'audio' ? 'MP3, WAV, OGG up to 50MB' : 'MP4, WEBM up to 200MB'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </section>
 
@@ -710,6 +929,66 @@ export default function RitualForm({ initialData, onCancel }: RitualFormProps) {
                     </div>
                 </section>
             </div>
+
+            {/* Upload Progress Overlay */}
+            {uploading && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+                    <div className={`p-8 rounded-2xl shadow-2xl max-w-sm w-full mx-4 ${isDark ? 'bg-zinc-900' : 'bg-white'}`}>
+                        <div className="flex flex-col items-center gap-4">
+                            <Loader2 className="w-10 h-10 animate-spin text-orange-500" />
+                            <div className="w-full">
+                                <div className={`h-2 w-full rounded-full overflow-hidden ${isDark ? 'bg-zinc-800' : 'bg-slate-200'}`}>
+                                    <div
+                                        className="h-full bg-orange-500 transition-all duration-300 rounded-full"
+                                        style={{ width: `${uploadProgress}%` }}
+                                    />
+                                </div>
+                            </div>
+                            <p className={`text-sm font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                Uploading {formData.mediaType}... {Math.round(uploadProgress)}%
+                            </p>
+                            <p className={`text-xs ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>Please wait, saving ritual...</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteMedia && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+                    <div className={`p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4 ${isDark ? 'bg-zinc-900' : 'bg-white'}`}>
+                        <div className="flex flex-col items-center gap-4 text-center">
+                            <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
+                                <Trash2 className="w-6 h-6 text-red-500" />
+                            </div>
+                            <div>
+                                <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Remove Media?</h3>
+                                <p className={`text-sm mt-1 ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
+                                    {formData.mediaUrl
+                                        ? 'This will permanently delete the file from storage.'
+                                        : 'This will remove the selected file.'}
+                                </p>
+                            </div>
+                            <div className="flex gap-3 w-full">
+                                <button
+                                    onClick={() => setShowDeleteMedia(false)}
+                                    className={`flex-1 px-4 py-2.5 rounded-xl font-bold text-sm transition-all ${isDark ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDeleteMedia}
+                                    disabled={deleting}
+                                    className="flex-1 px-4 py-2.5 rounded-xl font-bold text-sm bg-red-500 hover:bg-red-600 text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                    {deleting ? 'Deleting...' : 'Delete'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }

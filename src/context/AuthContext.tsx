@@ -44,6 +44,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (fUser) => {
+            console.log("AuthContext: onAuthStateChanged trigger", { hasFirebaseUser: !!fUser });
+            setLoading(true); // Ensure loading is reset while we fetch Firestore data
             setFirebaseUser(fUser);
 
             if (fUser) {
@@ -51,8 +53,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const userDoc = await getDoc(doc(db, 'users', fUser.uid));
 
                 if (userDoc.exists()) {
-                    setUser(userDoc.data() as AppUser);
+                    const userData = userDoc.data() as AppUser;
+                    console.log("AuthContext: Firestore user found", { roles: userData.roles });
+                    setUser(userData);
                 } else {
+                    console.log("AuthContext: Firestore user not found, creating default");
                     // Create new user profile if it doesn't exist (e.g., first sign up on web)
                     const newUser: AppUser = {
                         uid: fUser.uid,
@@ -68,13 +73,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     setUser(newUser);
                 }
             } else {
+                console.log("AuthContext: No Firebase user");
                 setUser(null);
             }
+            console.log("AuthContext: Auth flow complete, setLoading(false)");
             setLoading(false);
         });
 
         return () => unsubscribe();
     }, []);
+
+    // Inactivity Auto-Logout (30 minutes)
+    useEffect(() => {
+        if (!firebaseUser) return;
+
+        let inactivityTimeout: NodeJS.Timeout;
+        const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 minutes
+
+        const resetTimer = () => {
+            if (inactivityTimeout) clearTimeout(inactivityTimeout);
+            inactivityTimeout = setTimeout(() => {
+                console.warn("AuthContext: Inactivity limit reached, logging out...");
+                logout();
+            }, INACTIVITY_LIMIT);
+        };
+
+        const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
+        events.forEach(event => window.addEventListener(event, resetTimer));
+
+        resetTimer(); // Initial timer start
+
+        return () => {
+            if (inactivityTimeout) clearTimeout(inactivityTimeout);
+            events.forEach(event => window.removeEventListener(event, resetTimer));
+        };
+    }, [firebaseUser]);
 
     const loginWithGoogle = async () => {
         const provider = new GoogleAuthProvider();
@@ -88,7 +121,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const logout = async () => {
         try {
+            console.log("AuthContext: Logging out and clearing storage...");
             await signOut(auth);
+            // Clear all browser storage to remove any cached application state
+            localStorage.clear();
+            sessionStorage.clear();
+
+            // Redirect to login if on an admin page
+            if (window.location.pathname.includes('/admin')) {
+                window.location.href = `/${window.location.pathname.split('/')[1]}/admin/login`;
+            }
         } catch (error) {
             console.error("Logout failed:", error);
             throw error;

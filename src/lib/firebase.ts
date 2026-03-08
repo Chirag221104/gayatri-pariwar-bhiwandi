@@ -20,4 +20,11 @@ const storage = getStorage(app);
 const auth = getAuth(app);
 const functions = getFunctions(app, "asia-south1");
 
+import { setPersistence, browserSessionPersistence } from "firebase/auth";
+
+// Configure persistence
+setPersistence(auth, browserSessionPersistence).catch((err) => {
+    console.error("Firebase persistence error:", err);
+});
+
 export { app, db, storage, auth, functions };

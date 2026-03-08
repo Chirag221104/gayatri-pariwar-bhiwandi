@@ -33,6 +33,7 @@ export default function OrderManagementPage() {
     const [isDark, setIsDark] = useState(false);
     const { showToast } = useToast();
     const { user } = useAuth();
+    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [selectedOrderForQr, setSelectedOrderForQr] = useState<Order | null>(null);
     const params = useParams();
     const router = useRouter();
@@ -74,7 +75,21 @@ export default function OrderManagementPage() {
             const orderSnapshot = await getDoc(docRef);
             const previousStatus = orderSnapshot.exists() ? orderSnapshot.data()?.deliveryStatus : null;
 
+            // Map UI status to Backend Fulfillment Status to maintain consistency
+            const mapStatusToFulfillment = (status: string) => {
+                const map: Record<string, string> = {
+                    'placed': 'PLACED',
+                    'packing': 'PACKING',
+                    'packed': 'PACKED',
+                    'outForDelivery': 'SHIPPED',
+                    'delivered': 'DELIVERED',
+                    'cancelled': 'CANCELLED'
+                };
+                return map[status] || 'PLACED';
+            };
+
             await updateDoc(docRef, {
+                fulfillmentStatus: mapStatusToFulfillment(newStatus),
                 status: newStatus,
                 deliveryStatus: newStatus,
                 updatedAt: serverTimestamp(),
@@ -83,7 +98,9 @@ export default function OrderManagementPage() {
                     at: new Date(),
                     by: user?.uid || "admin",
                 }),
-                ...(newStatus === 'packed' ? { packedBy: user?.uid || "admin" } : {}),
+                ...(newStatus === 'packed' ? { packedBy: user?.uid || "admin", packingCompletedAt: serverTimestamp() } : {}),
+                ...(newStatus === 'packing' ? { packingStartedAt: serverTimestamp() } : {}),
+                ...(newStatus === 'placed' ? { assignedTo: null } : {}), // Revert assignment if placed
                 ...(newStatus === 'delivered' ? { deliveredBy: user?.uid || "admin" } : {})
             });
 
@@ -106,9 +123,13 @@ export default function OrderManagementPage() {
     const getStatusStyles = (status: string) => {
         switch (status?.toLowerCase()) {
             case 'delivered': return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
-            case 'shipped': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+            case 'outfordelivery': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
             case 'packed': return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
+            case 'packing':
+            case 'confirmed': return 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20';
+            case 'placed':
             case 'pending': return isDark ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-amber-50 text-amber-600 border-amber-200';
+            case 'cancelled': return 'bg-rose-500/10 text-rose-500 border-rose-500/20';
             default: return isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500';
         }
     };
@@ -119,7 +140,10 @@ export default function OrderManagementPage() {
             accessor: (item: Order) => (
                 <div className="flex flex-col">
                     <span className={`font-bold uppercase tracking-tighter ${isDark ? 'text-white' : 'text-slate-900'}`}>#{item.id.slice(-8)}</span>
-                    <span className="text-xs text-slate-500">{item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Just now'}</span>
+                    <span className="text-[10px] text-slate-500 leading-tight">
+                        {item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Just now'}<br />
+                        {item.createdAt?.toDate ? item.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                    </span>
                 </div>
             )
         },
@@ -158,18 +182,19 @@ export default function OrderManagementPage() {
                     >
                         <QrCode className="w-4 h-4" />
                     </button>
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getStatusStyles(item.deliveryStatus)}`}>
-                        {item.deliveryStatus || 'Pending'}
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getStatusStyles(item.status)}`}>
+                        {item.status || 'Placed'}
                     </span>
                     <select
                         onChange={(e) => updateOrderStatus(item.id, e.target.value)}
-                        value={item.deliveryStatus || 'pending'}
+                        value={item.status || 'placed'}
                         className={`text-[10px] font-bold uppercase py-1 px-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-orange-500/20 ${isDark ? 'bg-slate-700 border-slate-600 text-slate-300' : 'bg-white border-slate-200 text-slate-600'}`}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <option value="pending">Pending</option>
+                        <option value="placed">Placed</option>
+                        <option value="packing">Packing</option>
                         <option value="packed">Packed</option>
-                        <option value="shipped">Shipped</option>
+                        <option value="outForDelivery">Out for Delivery</option>
                         <option value="delivered">Delivered</option>
                         <option value="cancelled">Cancelled</option>
                     </select>
@@ -218,12 +243,88 @@ export default function OrderManagementPage() {
                     onSearchChange={setSearch}
                     emptyMessage="No orders found."
                     emptySubtext="Orders will appear here once customers place them."
-                    onRowClick={(item) => {
-                        // Could open a detailed order drawer/modal here
-                        console.log("View Order:", item.id);
-                    }}
+                    onRowClick={(item) => setSelectedOrder(item)}
                 />
             </div>
+
+            {/* Order Details Modal */}
+            {selectedOrder && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className={`w-full max-w-2xl rounded-2xl overflow-hidden animate-in fade-in zoom-in duration-300 flex flex-col max-h-[90vh] ${isDark ? 'bg-slate-900 border border-slate-800' : 'bg-white'}`}>
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                            <div>
+                                <h3 className={`text-lg font-bold uppercase tracking-tighter ${isDark ? 'text-white' : 'text-slate-900'}`}>Order Details</h3>
+                                <p className="text-xs text-slate-500">#{selectedOrder.id}</p>
+                            </div>
+                            <button onClick={() => setSelectedOrder(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                                <Eye className="w-5 h-5 text-slate-400" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 overflow-y-auto space-y-6">
+                            {/* Items Section */}
+                            <div className="space-y-3">
+                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Order Items</h4>
+                                <div className={`rounded-xl border ${isDark ? 'border-slate-800 bg-slate-800/50' : 'bg-slate-50 border-slate-100'}`}>
+                                    {selectedOrder.items?.map((item, idx) => (
+                                        <div key={idx} className={`p-4 flex items-center justify-between ${idx !== 0 ? 'border-t border-slate-100' : ''}`}>
+                                            <div className="flex flex-col">
+                                                <span className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{item.title}</span>
+                                                <span className="text-xs text-slate-500">Qty: {item.quantity} × ₹{item.unitPrice}</span>
+                                            </div>
+                                            <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>₹{item.quantity * item.unitPrice}</span>
+                                        </div>
+                                    ))}
+                                    <div className="p-4 border-t border-slate-200 bg-orange-500/5 flex items-center justify-between">
+                                        <span className="text-sm font-bold uppercase text-orange-600">Total Amount</span>
+                                        <span className="text-lg font-black text-orange-600">₹{selectedOrder.totalAmount}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Delivery Section */}
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-3">
+                                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Customer Info</h4>
+                                    <div className={`p-4 rounded-xl border ${isDark ? 'border-slate-800 bg-slate-800/50' : 'bg-slate-50 border-slate-100'}`}>
+                                        <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{selectedOrder.customerName}</p>
+                                        <p className="text-xs text-slate-500">{selectedOrder.customerPhone}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-3">
+                                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</h4>
+                                    <div className={`p-4 rounded-xl border flex items-center gap-3 ${isDark ? 'border-slate-800 bg-slate-800/50' : 'bg-slate-50 border-slate-100'}`}>
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${getStatusStyles(selectedOrder.status)}`}>
+                                            {selectedOrder.status}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Address Section */}
+                            <div className="space-y-3">
+                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Delivery Address</h4>
+                                <div className={`p-4 rounded-xl border ${isDark ? 'border-slate-800 bg-slate-800/50' : 'bg-slate-50 border-slate-100'}`}>
+                                    <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                                        {selectedOrder.deliveryAddress?.flat}, {selectedOrder.deliveryAddress?.society},<br />
+                                        {selectedOrder.deliveryAddress?.area}, {selectedOrder.deliveryAddress?.city},<br />
+                                        {selectedOrder.deliveryAddress?.state} - {selectedOrder.deliveryAddress?.pincode}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-6 bg-slate-50 border-t border-slate-100 mt-auto">
+                            <button
+                                onClick={() => setSelectedOrder(null)}
+                                className="w-full py-3 rounded-xl bg-slate-900 text-white font-bold uppercase tracking-wider hover:bg-slate-800 transition-colors"
+                            >
+                                Close Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* QR Code Modal */}
             {selectedOrderForQr && (

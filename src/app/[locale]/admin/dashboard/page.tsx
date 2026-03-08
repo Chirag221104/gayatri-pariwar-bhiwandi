@@ -10,15 +10,29 @@ import {
     TrendingDown,
     ArrowUpRight,
     BarChart3,
-    PieChart,
+    PieChart as LucidePieChart,
     Clock,
     ChevronRight,
     LayoutDashboard
 } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, limit } from "firebase/firestore";
+import { collection, getDocs, query, limit, orderBy } from "firebase/firestore";
 import { useRouter, useParams } from "next/navigation";
 import SectionHeader from "@/components/ui/SectionHeader";
+import {
+    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    PieChart, Pie, Cell, BarChart, Bar
+} from 'recharts';
+import {
+    processUserGrowth,
+    processRoleDistribution,
+    processEventEngagement,
+    processContentDistribution,
+    processSevaFulfillment,
+    processLMSCourseStats,
+    GrowthDataPoint,
+    ChartDataPoint
+} from "@/lib/analytics";
 
 interface DashboardStats {
     totalUsers: number;
@@ -38,7 +52,16 @@ export default function AdminDashboard() {
         pendingRequests: 0,
         activeSeva: 0
     });
+    const [growthData, setGrowthData] = useState<GrowthDataPoint[]>([]);
+    const [roleData, setRoleData] = useState<ChartDataPoint[]>([]);
+    const [eventData, setEventData] = useState<ChartDataPoint[]>([]);
+    const [contentData, setContentData] = useState<ChartDataPoint[]>([]);
+    const [sevaFulfillmentData, setSevaFulfillmentData] = useState<ChartDataPoint[]>([]);
+    const [lmsData, setLmsData] = useState<ChartDataPoint[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const COLORS = ['#f97316', '#3b82f6', '#a855f7', '#10b981', '#6366f1'];
+    const CONTENT_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444'];
 
     // Check if dark mode (passed from layout or detect from DOM)
     const [isDark, setIsDark] = useState(false);
@@ -63,58 +86,50 @@ export default function AdminDashboard() {
     }, []);
 
     useEffect(() => {
-        async function fetchStats() {
+        async function fetchDashboardData() {
             try {
-                const fetchUsers = async () => {
-                    try {
-                        const snap = await getDocs(query(collection(db, "users"), limit(500)));
-                        return snap.size;
-                    } catch (e) {
-                        console.warn("User stats limited:", e);
-                        return 0;
-                    }
-                };
+                // Fetch Users for Stats and Growth
+                const userSnap = await getDocs(query(
+                    collection(db, "users"),
+                    orderBy("createdAt", "desc"),
+                    limit(1000)
+                ));
+                const allUsers = userSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                const fetchEvents = async () => {
-                    try {
-                        const snap = await getDocs(collection(db, "events"));
-                        return snap.size;
-                    } catch (e) {
-                        return 0;
-                    }
-                };
+                // Fetch Events
+                const eventSnap = await getDocs(collection(db, "events"));
+                const allEvents = eventSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                const fetchRequests = async () => {
-                    try {
-                        const snap = await getDocs(collection(db, "service_requests"));
-                        return snap.docs.filter(d => d.data().status === "pending" || d.data().status === "requested").length;
-                    } catch (e) {
-                        return 0;
-                    }
-                };
+                // Fetch Requests & Seva
+                const requestSnap = await getDocs(collection(db, "service_requests"));
+                const sevaSnap = await getDocs(collection(db, "seva_opportunities"));
+                const allSeva = sevaSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                const fetchSeva = async () => {
-                    try {
-                        const snap = await getDocs(collection(db, "seva_opportunities"));
-                        return snap.docs.filter(d => d.data().status === "active" || d.data().status === "published").length;
-                    } catch (e) {
-                        return 0;
-                    }
-                };
-
-                const [userCount, eventCount, requestCount, sevaCount] = await Promise.all([
-                    fetchUsers(),
-                    fetchEvents(),
-                    fetchRequests(),
-                    fetchSeva()
-                ]);
+                // Fetch News & Media for content distribution
+                const newsSnap = await getDocs(collection(db, "news"));
+                const mediaSnap = await getDocs(collection(db, "media"));
 
                 setStats({
-                    totalUsers: userCount,
-                    totalEvents: eventCount,
-                    pendingRequests: requestCount,
-                    activeSeva: sevaCount
+                    totalUsers: userSnap.size,
+                    totalEvents: eventSnap.size,
+                    pendingRequests: requestSnap.docs.filter(d => d.data().status === "pending" || d.data().status === "requested").length,
+                    activeSeva: sevaSnap.docs.filter(d => d.data().status === "active" || d.data().status === "published").length
                 });
+
+                setGrowthData(processUserGrowth(allUsers));
+                setRoleData(processRoleDistribution(allUsers));
+                setEventData(processEventEngagement(allEvents));
+
+                setContentData(processContentDistribution({
+                    events: eventSnap.size,
+                    news: newsSnap.size,
+                    media: mediaSnap.size,
+                    seva: sevaSnap.size
+                }));
+
+                setSevaFulfillmentData(processSevaFulfillment(allSeva));
+                setLmsData(processLMSCourseStats(allUsers));
+
             } catch (error) {
                 console.error("Dashboard fetch error:", error);
             } finally {
@@ -122,7 +137,7 @@ export default function AdminDashboard() {
             }
         }
 
-        fetchStats();
+        fetchDashboardData();
     }, []);
 
     const handleAction = (href: string) => {
@@ -277,35 +292,62 @@ export default function AdminDashboard() {
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
                             <div className={`p-2 rounded-lg ${isDark ? 'bg-zinc-800' : 'bg-slate-100'}`}>
-                                <BarChart3 className={`w-5 h-5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+                                <TrendingUp className={`w-5 h-5 ${isDark ? 'text-orange-400' : 'text-orange-600'}`} />
                             </div>
                             <div>
                                 <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                                    Activity Overview
+                                    User Growth Trend
                                 </h3>
                                 <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                                    Last 7 days
+                                    Last 15 registration days
                                 </p>
                             </div>
                         </div>
-                        <select className={`text-sm px-3 py-1.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-orange-500/20 ${isDark
-                            ? 'bg-zinc-800 border-zinc-700 text-zinc-300'
-                            : 'bg-white border-slate-200 text-slate-600'
-                            }`}>
-                            <option>This week</option>
-                            <option>This month</option>
-                        </select>
                     </div>
 
-                    {/* Chart Placeholder */}
-                    <div className={`h-48 rounded-lg flex items-center justify-center border-2 border-dashed ${isDark ? 'border-zinc-800 bg-zinc-950/50' : 'border-slate-200 bg-slate-50'
-                        }`}>
-                        <div className="text-center">
-                            <BarChart3 className={`w-10 h-10 mx-auto mb-2 ${isDark ? 'text-slate-600' : 'text-slate-300'}`} />
-                            <p className={`text-sm ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                                Chart integration coming soon
-                            </p>
-                        </div>
+                    {/* User Growth Chart */}
+                    <div className="h-72 mt-4">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={growthData}>
+                                <defs>
+                                    <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#f97316" stopOpacity={0.8} />
+                                        <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#333' : '#eee'} />
+                                <XAxis
+                                    dataKey="date"
+                                    stroke={isDark ? '#666' : '#999'}
+                                    fontSize={11}
+                                    tickLine={false}
+                                    axisLine={false}
+                                />
+                                <YAxis
+                                    stroke={isDark ? '#666' : '#999'}
+                                    fontSize={11}
+                                    tickLine={false}
+                                    axisLine={false}
+                                />
+                                <Tooltip
+                                    contentStyle={{
+                                        backgroundColor: isDark ? '#18181b' : '#fff',
+                                        border: `1px solid ${isDark ? '#3f3f46' : '#e2e8f0'}`,
+                                        borderRadius: '12px',
+                                        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'
+                                    }}
+                                />
+                                <Line
+                                    type="monotone"
+                                    dataKey="users"
+                                    stroke="#f97316"
+                                    strokeWidth={4}
+                                    dot={{ fill: '#f97316', r: 5, strokeWidth: 2, stroke: isDark ? '#18181b' : '#fff' }}
+                                    activeDot={{ r: 8, strokeWidth: 0 }}
+                                    animationDuration={1500}
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
 
@@ -314,34 +356,175 @@ export default function AdminDashboard() {
                     }`}>
                     <div className="flex items-center gap-3 mb-6">
                         <div className={`p-2 rounded-lg ${isDark ? 'bg-zinc-800' : 'bg-slate-100'}`}>
-                            <PieChart className={`w-5 h-5 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
+                            <LucidePieChart className={`w-5 h-5 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
                         </div>
                         <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                            Engagement
+                            User Distribution
                         </h3>
                     </div>
 
-                    {/* Pie Placeholder */}
-                    <div className={`h-32 rounded-lg flex items-center justify-center border-2 border-dashed mb-4 ${isDark ? 'border-zinc-800 bg-zinc-950/50' : 'border-slate-200 bg-slate-50'
-                        }`}>
-                        <PieChart className={`w-8 h-8 ${isDark ? 'text-slate-600' : 'text-slate-300'}`} />
+                    {/* Role Distribution Chart */}
+                    <div className="h-48 mb-6 mt-4">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={roleData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={50}
+                                    outerRadius={75}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                >
+                                    {roleData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                            </PieChart>
+                        </ResponsiveContainer>
                     </div>
 
-                    {/* Legend */}
-                    <div className="space-y-2">
-                        {[
-                            { label: 'Events', color: 'bg-orange-500', value: '45%' },
-                            { label: 'Seva', color: 'bg-blue-500', value: '30%' },
-                            { label: 'Content', color: 'bg-purple-500', value: '25%' },
-                        ].map((item) => (
-                            <div key={item.label} className="flex items-center justify-between text-sm">
+                    <div className="space-y-2 mt-4">
+                        {roleData.map((item, index) => (
+                            <div key={item.name} className="flex items-center justify-between text-sm">
                                 <div className="flex items-center gap-2">
-                                    <div className={`w-3 h-3 rounded-full ${item.color}`} />
-                                    <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>{item.label}</span>
+                                    <div className={`w-3 h-3 rounded-full`} style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                                    <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>{item.name}</span>
                                 </div>
-                                <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{item.value}</span>
+                                <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                    {item.value} ({Math.round((item.value / stats.totalUsers) * 100)}%)
+                                </span>
                             </div>
                         ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Content & Seva Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {/* Content Distribution */}
+                <div className={`p-6 rounded-xl ${isDark ? 'bg-zinc-900 border border-zinc-800' : 'bg-white shadow-sm border border-slate-200'}`}>
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className={`p-2 rounded-lg ${isDark ? 'bg-zinc-800' : 'bg-slate-100'}`}>
+                            <ClipboardList className={`w-5 h-5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+                        </div>
+                        <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            Content Presence
+                        </h3>
+                    </div>
+                    <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={contentData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={60}
+                                    outerRadius={85}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                >
+                                    {contentData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={CONTENT_COLORS[index % CONTENT_COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mt-4">
+                        {contentData.map((item, index) => (
+                            <div key={item.name} className="flex items-center justify-between text-xs p-2 rounded-lg bg-zinc-50/50 dark:bg-zinc-800/50">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: CONTENT_COLORS[index % CONTENT_COLORS.length] }} />
+                                    <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>{item.name}</span>
+                                </div>
+                                <span className="font-bold">{item.value}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Seva Performance */}
+                <div className={`p-6 rounded-xl ${isDark ? 'bg-zinc-900 border border-zinc-800' : 'bg-white shadow-sm border border-slate-200'}`}>
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className={`p-2 rounded-lg ${isDark ? 'bg-zinc-800' : 'bg-slate-100'}`}>
+                            <HandHelping className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                        </div>
+                        <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            Seva Fulfillment
+                        </h3>
+                    </div>
+                    <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={sevaFulfillmentData} layout="vertical">
+                                <XAxis type="number" hide />
+                                <YAxis dataKey="name" type="category" stroke={isDark ? '#666' : '#999'} fontSize={12} width={70} />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: isDark ? '#18181b' : '#fff', borderRadius: '8px' }}
+                                />
+                                <Bar dataKey="value" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                    <div className="bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-xl mt-4 border border-emerald-100 dark:border-emerald-800/30">
+                        <p className="text-sm text-emerald-800 dark:text-emerald-400 font-medium text-center">
+                            Volunteer conversion rate is healthy.
+                            <br />
+                            <span className="text-xs opacity-70">Focus on "Active" assignments to ensure completion.</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* LMS & Event Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {/* Event Engagement */}
+                <div className={`p-6 rounded-xl ${isDark ? 'bg-zinc-900 border border-zinc-800' : 'bg-white shadow-sm border border-slate-200'}`}>
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className={`p-2 rounded-lg ${isDark ? 'bg-zinc-800' : 'bg-slate-100'}`}>
+                            <Calendar className={`w-5 h-5 ${isDark ? 'text-orange-400' : 'text-orange-600'}`} />
+                        </div>
+                        <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            Event Participation
+                        </h3>
+                    </div>
+
+                    <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={eventData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#333' : '#eee'} />
+                                <XAxis dataKey="name" stroke={isDark ? '#666' : '#999'} fontSize={10} angle={-15} textAnchor="end" height={50} />
+                                <YAxis stroke={isDark ? '#666' : '#999'} fontSize={11} />
+                                <Tooltip contentStyle={{ backgroundColor: isDark ? '#18181b' : '#fff', borderRadius: '8px' }} />
+                                <Bar dataKey="value" fill="#f97316" radius={[4, 4, 0, 0]} barSize={30} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* LMS Course Engagement */}
+                <div className={`p-6 rounded-xl ${isDark ? 'bg-zinc-900 border border-zinc-800' : 'bg-white shadow-sm border border-slate-200'}`}>
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className={`p-2 rounded-lg ${isDark ? 'bg-zinc-800' : 'bg-slate-100'}`}>
+                            <BarChart3 className={`w-5 h-5 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
+                        </div>
+                        <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            Sanskar Course Traffic
+                        </h3>
+                    </div>
+
+                    <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={lmsData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#333' : '#eee'} />
+                                <XAxis dataKey="name" stroke={isDark ? '#666' : '#999'} fontSize={11} />
+                                <YAxis stroke={isDark ? '#666' : '#999'} fontSize={11} />
+                                <Tooltip contentStyle={{ backgroundColor: isDark ? '#18181b' : '#fff', borderRadius: '8px' }} />
+                                <Line type="step" dataKey="value" stroke="#8b5cf6" strokeWidth={3} dot={{ fill: '#8b5cf6', r: 4 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
             </div>

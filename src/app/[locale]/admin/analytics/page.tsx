@@ -34,6 +34,7 @@ export default function AnalyticsDashboard() {
     const [monthMetrics, setMonthMetrics] = useState<any>(null);
     const [skuMetrics, setSkuMetrics] = useState<any[]>([]);
     const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
+    const [booksMap, setBooksMap] = useState<Record<string, any>>({});
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -97,12 +98,22 @@ export default function AnalyticsDashboard() {
             setLoading(false); // Don't block UI if one feed fails
         });
 
+        // 3. Fetch Books for Title Mapping
+        const unsubBooks = onSnapshot(collection(db, "granthalaya_app", "inventory", "books"), (snap) => {
+            const mapping: Record<string, any> = {};
+            snap.docs.forEach(d => {
+                mapping[d.id] = { id: d.id, ...d.data() };
+            });
+            setBooksMap(mapping);
+        });
+
         return () => {
             unsubToday();
             unsubMonth();
             unsubPending();
             unsubDaily();
             unsubSkus();
+            unsubBooks();
         };
     }, []);
 
@@ -130,6 +141,15 @@ export default function AnalyticsDashboard() {
         return `${mins}m`;
     };
 
+    const formatDate = (id: string) => {
+        if (!id || id.length !== 8) return id;
+        const y = id.substring(0, 4);
+        const m = id.substring(4, 6);
+        const d = id.substring(6, 8);
+        const date = new Date(`${y}-${m}-${d}`);
+        return date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
+    };
+
     const reservationToPackAvg = getAvgTime(todayMetrics?.total_resToPack_Time || 0, todayMetrics?.resToPack_Count || 0);
     const packToDeliveryAvg = getAvgTime(todayMetrics?.total_packToDelivery_Time || 0, todayMetrics?.packToDelivery_Count || 0);
 
@@ -137,6 +157,8 @@ export default function AnalyticsDashboard() {
     const conversionRate = todayMetrics?.reservationsCreated
         ? Math.round((todayMetrics.ordersDelivered / todayMetrics.reservationsCreated) * 100)
         : 0;
+
+    const maxOrders = Math.max(5, ...dailyMetrics.map(d => d.ordersPlaced || 0));
 
     return (
         <div className="space-y-8 pb-12">
@@ -170,9 +192,9 @@ export default function AnalyticsDashboard() {
                     color="blue"
                 />
                 <StatCard
-                    title="Orders Pending"
+                    title="Logistics Queue"
                     value={pendingOrdersCount}
-                    subValue="Logistics Queue"
+                    subValue="Orders Pending"
                     icon={<ShoppingCart className="h-5 w-5" />}
                     trend="Action Required"
                     color="orange"
@@ -215,21 +237,37 @@ export default function AnalyticsDashboard() {
                             <div key={day.id} className="flex-1 flex flex-col items-center group relative">
                                 <motion.div
                                     initial={{ height: 0 }}
-                                    animate={{ height: `${Math.min(100, (day.ordersPlaced / 50) * 100)}%` }}
-                                    className={`w-full rounded-t-sm transition-all ${i === dailyMetrics.length - 1 ? 'bg-primary' : 'bg-primary/20 hover:bg-primary/40'}`}
-                                />
+                                    animate={{ height: `${Math.max(8, ((day.ordersPlaced || 0) / maxOrders) * 100)}%` }}
+                                    className={`w-full rounded-t-md transition-all relative overflow-hidden ${i === dailyMetrics.length - 1
+                                        ? 'bg-gradient-to-t from-primary to-orange-400'
+                                        : 'bg-primary/20 hover:bg-primary/40'
+                                        }`}
+                                >
+                                    {i === dailyMetrics.length - 1 && (
+                                        <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                                    )}
+                                </motion.div>
                                 {/* Tooltip */}
-                                <div className="absolute bottom-full mb-2 hidden group-hover:block z-10">
-                                    <div className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded shadow-lg whitespace-nowrap">
-                                        {day.id}: {day.ordersPlaced} orders
+                                <div className="absolute bottom-full mb-2 hidden group-hover:block z-20">
+                                    <div className="bg-gray-900 text-white text-[10px] px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap border border-white/10 backdrop-blur-sm">
+                                        <div className="font-bold border-b border-white/10 mb-1 pb-1">{formatDate(day.id)}</div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                                            {day.ordersPlaced} Orders Placed
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                            {day.ordersDelivered || 0} Delivered
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         ))}
                     </div>
-                    <div className="flex justify-between mt-4 text-[10px] text-gray-400 font-medium px-1">
-                        <span>{dailyMetrics[0]?.id}</span>
-                        <span>Today</span>
+                    <div className="flex justify-between mt-4 text-[10px] text-gray-400 font-bold uppercase tracking-wider px-1">
+                        <span>{formatDate(dailyMetrics[0]?.id)}</span>
+                        <span>{formatDate(dailyMetrics[Math.floor(dailyMetrics.length / 2)]?.id)}</span>
+                        <span className="text-primary font-black">Today</span>
                     </div>
                 </div>
 
@@ -242,14 +280,14 @@ export default function AnalyticsDashboard() {
 
                     <div className="space-y-6">
                         <TimingMetric
-                            label="Res → Packing"
+                            label="Order Pick-up Speed"
                             value={reservationToPackAvg}
-                            description="Time to start processing"
+                            description="Res → Packing"
                         />
                         <TimingMetric
-                            label="Packing → Delivered"
+                            label="Final Delivery Speed"
                             value={packToDeliveryAvg}
-                            description="Last mile transit speed"
+                            description="Packing → Delivered"
                         />
 
                         <div className="pt-4 border-t border-gray-50">
@@ -279,11 +317,21 @@ export default function AnalyticsDashboard() {
                         {skuMetrics.slice(0, 5).map((sku) => (
                             <div key={sku.id} className="p-5 flex items-center justify-between hover:bg-gray-50 transition-colors">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-400">
-                                        BK
-                                    </div>
+                                    {booksMap[sku.id]?.imageUrl || booksMap[sku.id]?.coverUrl ? (
+                                        <img
+                                            src={booksMap[sku.id]?.imageUrl || booksMap[sku.id]?.coverUrl}
+                                            alt=""
+                                            className="w-10 h-14 rounded shadow-sm object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-400">
+                                            BK
+                                        </div>
+                                    )}
                                     <div>
-                                        <div className="text-sm font-bold text-gray-900">{sku.id}</div>
+                                        <div className="text-sm font-bold text-gray-900 truncate max-w-[200px]">
+                                            {booksMap[sku.id]?.name || booksMap[sku.id]?.title || sku.id}
+                                        </div>
                                         <div className="text-xs text-gray-500">Velocity Score: {sku.velocityScore || 'Pending'}</div>
                                     </div>
                                 </div>
