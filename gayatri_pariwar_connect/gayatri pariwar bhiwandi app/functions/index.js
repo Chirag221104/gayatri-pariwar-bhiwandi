@@ -7,7 +7,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { DateTime } = require("luxon");
 const crypto = require("crypto");
-
+const logger = require("firebase-functions/logger");
 // Optimize to prevent CPU Quota Errors
 setGlobalOptions({
     maxInstances: 1,
@@ -489,10 +489,11 @@ exports.midnightTasks = onSchedule({
 }, async (event) => {
     const db = admin.firestore();
     const now = new Date();
-    console.log(`[midnightTasks] Starting midnight tasks for ${now.toISOString()}`);
+    logger.info(`[midnightTasks] Starting midnight execution for ${now.toISOString()}`);
     
     // --- TASK A: Auto-complete Past Service Requests ---
     try {
+        const startTime = Date.now();
         const dateStr = now.toISOString().split('T')[0];
         const snapshot = await db.collection("service_requests").where("status", "==", "accepted").get();
         let count = 0;
@@ -511,14 +512,20 @@ exports.midnightTasks = onSchedule({
 
         if (count > 0) {
             await batch.commit();
-            console.log(`[midnightTasks] Auto-completed ${count} past requests`);
         }
+        
+        logger.info("[midnightTasks] autoCompletePastServices completed", {
+            processed: count,
+            updated: count,
+            durationMs: Date.now() - startTime
+        });
     } catch (error) {
-        console.error(`[midnightTasks] Error in Auto-complete Past Service Requests:`, error);
+        logger.error("[midnightTasks] autoCompletePastServices failed", error);
     }
 
     // --- TASK B: Auto-Resume Postponed Sevas ---
     try {
+        const startTime = Date.now();
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const tomorrowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
 
@@ -528,9 +535,9 @@ exports.midnightTasks = onSchedule({
             .where('date', '<', tomorrowStart)
             .get();
 
+        let count = 0;
         if (!snapshot.empty) {
             const batch = db.batch();
-            let count = 0;
 
             snapshot.docs.forEach(doc => {
                 const sevaId = doc.id;
@@ -556,14 +563,20 @@ exports.midnightTasks = onSchedule({
             });
 
             await batch.commit();
-            console.log(`[midnightTasks] Auto-resumed ${count} postponed sevas`);
         }
+        
+        logger.info("[midnightTasks] checkPostponedSevas completed", {
+            processed: snapshot.empty ? 0 : snapshot.docs.length,
+            updated: count,
+            durationMs: Date.now() - startTime
+        });
     } catch (error) {
-        console.error(`[midnightTasks] Error in Auto-Resume Postponed Sevas:`, error);
+        logger.error("[midnightTasks] checkPostponedSevas failed", error);
     }
 
     // --- TASK C: Send Daily Celebrations ---
     try {
+        const startTime = Date.now();
         const usersSnap = await db.collection("users").get();
         let birthdayCount = 0;
         let anniversaryCount = 0;
@@ -617,14 +630,21 @@ exports.midnightTasks = onSchedule({
                 },
             };
 
-            const response = await admin.messaging().sendToTopic("all_users", payload);
-            console.log(`[midnightTasks] Celebrations notification sent: ${response.messageId}`);
+            await admin.messaging().sendToTopic("all_users", payload);
         }
+        
+        logger.info("[midnightTasks] sendDailyCelebrations completed", {
+            processed: usersSnap.docs.length,
+            birthdays: birthdayCount,
+            anniversaries: anniversaryCount,
+            notificationsSent: totalCelebrations > 0 ? 1 : 0,
+            durationMs: Date.now() - startTime
+        });
     } catch (error) {
-        console.error(`[midnightTasks] Error in Send Daily Celebrations:`, error);
+        logger.error("[midnightTasks] sendDailyCelebrations failed", error);
     }
 
-    console.log(`[midnightTasks] Completed all tasks.`);
+    logger.info(`[midnightTasks] All tasks completed.`);
     return { success: true };
 });
 
