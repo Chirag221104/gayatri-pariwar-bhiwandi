@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { Lock, Mail, AlertCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -27,17 +27,34 @@ export default function AdminLoginPage() {
 
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            if (userCredential.user.email === "gayatripariwarbhiwandi@gmail.com") {
+            const user = userCredential.user;
+
+            // Simple check for the master admin email first
+            if (user.email === "gayatripariwarbhiwandi@gmail.com") {
+                router.push(`/${locale}/admin/dashboard`);
+                return;
+            }
+
+            // Otherwise, check Firestore roles for other authorized admins
+            const { getDoc, doc } = await import("firebase/firestore");
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            const userData = userDoc.data();
+
+            if (userData?.roles?.websiteAdmin === true) {
                 router.push(`/${locale}/admin/dashboard`);
             } else {
                 setError("Access denied. You do not have administrator privileges.");
-                // We'll let the user stay logged in but show error, 
-                // AdminGuard will handle the redirection if they try to go anywhere else.
+                await auth.signOut();
             }
         } catch (err: any) {
             console.error("Login error:", err);
-            if (err.code === "auth/invalid-credential") {
+            const errorCode = err.code;
+            if (errorCode === "auth/invalid-credential" ||
+                errorCode === "auth/wrong-password" ||
+                errorCode === "auth/user-not-found") {
                 setError("Invalid email or password.");
+            } else if (errorCode === "auth/too-many-requests") {
+                setError("Too many failed login attempts. Please try again later.");
             } else {
                 setError("An error occurred during login. Please try again.");
             }

@@ -11,13 +11,32 @@ The official community portal for **Gayatri Pariwar, Bhiwandi Branch** — a spi
 
 ## ✨ Features
 
+### 👑 Admin Dashboard (Secure)
+A powerful, light-mode optimized interface for managing all aspects of the application.
+- **Media Management**: 
+    - Full-featured file manager with folder support.
+    - Drag-and-drop uploads for images and videos.
+    - Public URL generation and clipboard copy.
+- **Spiritual Content Studio**: 
+    - **Mantra Manager**: Create and edit mantras with audio links and color coding.
+    - **Daily Quotes**: Schedule daily inspiration with rich text and background controls.
+    - **Good Thoughts/Tips**: Manage snippets of wisdom for the home screen.
+- **Event & News Control**: 
+    - **Events**: Create rich event pages with date, time, location maps, and responsible person details.
+    - **News**: Publish community announcements with full HTML editing capabilities.
+- **Service Request System**: Track and manage community service requests (Sanskar requests).
+- **Audit Logging**: Comprehensive activity log tracking who changed what and when.
+- **User Management**: Role-based access control (Admin, Super Admin).
+
 ### 🕉️ Spiritual Content
 - **Daily Darshan**: Daily inspirational quotes with beautiful image cards, shareable and downloadable.
 - **Wisdom Cards**: Premium quote cards generated dynamically with branding.
+- **Resources**: Library of PDF books, audio tracks, and videos.
 
 ### 📰 News & Events
 - **News Feed**: Latest announcements and community news with full-page articles.
 - **Events Calendar**: Upcoming and past events with detailed descriptions and image galleries.
+- **RSVP**: Integration for event registration (coming soon).
 
 ### 🖼️ Media Gallery
 - **Folder-based Organization**: Browse media organized into folders and sub-folders.
@@ -28,10 +47,10 @@ The official community portal for **Gayatri Pariwar, Bhiwandi Branch** — a spi
 - **4 Languages**: Full localization in English, Hindi, Marathi, and Gujarati.
 - **Indic Script Optimization**: Correct rendering of Devanagari and Gujarati scripts.
 
-### 🎨 Premium Design
-- **Dark & Light Themes**: Smooth theme switching with carefully calibrated colors.
-- **Glassmorphism UI**: Modern frosted-glass aesthetic with subtle gradients.
-- **Responsive Layout**: Optimized for mobile, tablet, and desktop.
+### 🎨 Design Philosophy
+- **Modern Aesthetic**: Glassmorphism UI with subtle gradients and motion effects.
+- **Dual Theme**: Fully supported Dark & Light modes with automatic switching.
+- **Admin Focus**: The Admin panel is optimized for **Light Mode** to provide a clean, distraction-free, and professional workspace for content management.
 
 ---
 
@@ -44,7 +63,7 @@ The official community portal for **Gayatri Pariwar, Bhiwandi Branch** — a spi
 | Styling | [Tailwind CSS 4](https://tailwindcss.com/) |
 | Animations | [Framer Motion](https://www.framer.com/motion/) |
 | Icons | [Lucide React](https://lucide.dev/) |
-| Backend | [Firebase](https://firebase.google.com/) (Firestore, Storage) |
+| Backend | [Firebase](https://firebase.google.com/) (Firestore, Storage, Auth) |
 | Localization | [next-intl](https://next-intl-docs.vercel.app/) |
 | Theming | [next-themes](https://github.com/pacocoursey/next-themes) |
 
@@ -98,12 +117,13 @@ npm start
 ├── src/
 │   ├── app/           # Next.js App Router pages
 │   │   ├── [locale]/  # Localized routes
+│   │   │   ├── admin/ # Protected Admin Dashboard
 │   │   │   ├── events/
 │   │   │   ├── news/
 │   │   │   ├── spiritual/
 │   │   │   ├── media/
 │   │   │   └── ...
-│   │   └── api/       # API routes (download proxy)
+│   │   └── api/       # API routes
 │   ├── components/    # Reusable UI components
 │   └── lib/           # Utilities and Firebase config
 └── ...

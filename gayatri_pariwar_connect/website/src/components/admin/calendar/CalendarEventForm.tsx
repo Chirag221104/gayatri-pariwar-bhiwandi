@@ -166,6 +166,7 @@ export default function CalendarEventForm({ initialData, onCancel }: CalendarEve
                                         onChange={(e) => { setFormData({ ...formData, date: e.target.value }); setIsDirty(true); }}
                                         required
                                         className={`w-full border rounded-xl py-3 pl-10 pr-4 focus:ring-1 focus:ring-orange-500/50 outline-none ${inputClass}`}
+                                        style={{ colorScheme: isDark ? 'dark' : 'light' }}
                                     />
                                 </div>
                             </div>

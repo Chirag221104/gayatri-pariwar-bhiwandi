@@ -10,6 +10,7 @@ import {
 import ServiceTypesList from "@/components/admin/services/ServiceTypesList";
 import ServiceRequestsList from "@/components/admin/services/ServiceRequestsList";
 import SevaList from "@/components/admin/services/SevaList";
+import SectionHeader from "@/components/ui/SectionHeader";
 
 type TabType = "requests" | "types" | "seva";
 
@@ -43,37 +44,33 @@ export default function ServiceManagementPage() {
 
     return (
         <div className="space-y-8 flex flex-col h-[calc(100vh-8rem)]">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className={`text-3xl font-bold flex items-center gap-4 ${isDark ? 'text-white' : 'text-black'}`}>
-                        <Activity className="w-8 h-8 text-orange-500" />
-                        Service Management
-                    </h1>
-                    <p className="text-slate-500 mt-1">{activeTabInfo?.description}</p>
-                </div>
-
-                {/* Tab Navigation */}
-                <div className={`flex items-center gap-1 p-1 border rounded-2xl w-fit shadow-sm ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-                    {tabs.map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id as TabType)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === tab.id
-                                ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20"
-                                : isDark
-                                    ? "text-slate-500 hover:text-slate-300 hover:bg-slate-800"
-                                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                                }`}
-                        >
-                            <tab.icon className="w-4 h-4" />
-                            <span className="hidden sm:inline">{tab.label}</span>
-                        </button>
-                    ))}
-                </div>
-            </div>
+            <SectionHeader
+                title="Service Management"
+                subtitle={activeTabInfo?.description || "Manage spiritual services and community requests"}
+                icon={Activity}
+                actions={
+                    <div className={`flex items-center gap-1 p-1 border rounded-2xl w-fit shadow-sm ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-200'}`}>
+                        {tabs.map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id as TabType)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === tab.id
+                                    ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20"
+                                    : isDark
+                                        ? "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+                                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                                    }`}
+                            >
+                                <tab.icon className="w-4 h-4" />
+                                <span className="hidden sm:inline">{tab.label}</span>
+                            </button>
+                        ))}
+                    </div>
+                }
+            />
 
             {/* Tab Content */}
-            <div className={`flex-1 min-h-0 border rounded-2xl overflow-hidden relative shadow-sm ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className={`flex-1 min-h-0 border rounded-2xl overflow-hidden relative shadow-sm ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-slate-200'}`}>
                 {activeTab === "requests" && <ServiceRequestsList />}
                 {activeTab === "types" && <ServiceTypesList />}
                 {activeTab === "seva" && <SevaList />}

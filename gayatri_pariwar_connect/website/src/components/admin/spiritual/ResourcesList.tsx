@@ -5,6 +5,7 @@ import { Plus, BookOpen, Video, FileText, Tag, Link as LinkIcon, Download, Music
 import { db } from "@/lib/firebase";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import AdminTable from "@/components/admin/AdminTable";
+import StatusBadge from "@/components/ui/StatusBadge";
 import ResourceForm from "@/components/admin/spiritual/ResourceForm";
 
 interface SpiritualResource {
@@ -23,6 +24,20 @@ export default function ResourcesList() {
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [selectedResource, setSelectedResource] = useState<SpiritualResource | null>(null);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [isDark, setIsDark] = useState(false);
+
+    useEffect(() => {
+        const checkDark = () => {
+            const saved = localStorage.getItem('admin-theme');
+            if (saved === 'dark') setIsDark(true);
+            else if (saved === 'system') setIsDark(window.matchMedia('(prefers-color-scheme: dark)').matches);
+            else setIsDark(false);
+        };
+        checkDark();
+        const interval = setInterval(checkDark, 500);
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         const q = query(
@@ -44,6 +59,12 @@ export default function ResourcesList() {
 
         return () => unsubscribe();
     }, []);
+
+    const filteredResources = resources.filter(r =>
+        r.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        r.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        r.type.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     const getTypeIcon = (type: string) => {
         switch (type?.toLowerCase()) {
@@ -99,12 +120,11 @@ export default function ResourcesList() {
         {
             header: "Status",
             accessor: (item: SpiritualResource) => (
-                <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${item.status === 'active'
-                    ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
-                    : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-500 border border-slate-200 dark:border-slate-700"
-                    }`}>
-                    {item.status || 'Draft'}
-                </span>
+                <StatusBadge
+                    variant={item.status === 'active' ? 'active' : 'unavailable'}
+                    label={item.status || 'Draft'}
+                    className="shadow-sm"
+                />
             )
         }
     ];
@@ -119,11 +139,11 @@ export default function ResourcesList() {
     }
 
     return (
-        <div className="flex flex-col h-full bg-transparent">
-            <div className="p-6 border-b border-slate-200 flex items-center justify-between bg-white sticky top-0 z-20">
+        <div className={`flex flex-col h-full ${isDark ? 'bg-zinc-950 text-white' : 'bg-white text-slate-900'}`}>
+            <div className={`p-6 border-b flex items-center justify-between sticky top-0 z-20 ${isDark ? 'border-zinc-800 bg-zinc-950' : 'border-slate-200 bg-white'}`}>
                 <div>
-                    <h2 className="text-xl font-bold text-slate-900">Spiritual Resources</h2>
-                    <p className="text-xs text-slate-500">Books, videos, and articles for deep study</p>
+                    <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Spiritual Resources</h2>
+                    <p className={`text-xs ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>Manage books, audio, video, and other media</p>
                 </div>
                 <button
                     onClick={() => { setSelectedResource(null); setShowForm(true); }}
@@ -134,11 +154,14 @@ export default function ResourcesList() {
                 </button>
             </div>
 
-            <div className="flex-1 min-h-0 bg-white dark:bg-slate-900">
+            <div className="flex-1 min-h-0">
                 <AdminTable
                     columns={columns}
-                    data={resources}
+                    data={filteredResources}
                     loading={loading}
+                    searchValue={searchTerm}
+                    onSearchChange={setSearchTerm}
+                    searchPlaceholder="Search by title, category, or type..."
                     onRowClick={(item) => { setSelectedResource(item); setShowForm(true); }}
                     emptyMessage="No resources found. Build the library!"
                 />

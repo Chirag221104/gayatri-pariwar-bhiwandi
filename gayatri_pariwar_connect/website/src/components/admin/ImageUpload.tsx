@@ -6,65 +6,134 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { Loader2, Upload, Image as ImageIcon, X } from "lucide-react";
 
 interface ImageUploadProps {
-    onUpload: (url: string) => void;
+    onUpload?: (url: string) => void;
+    onUploadMultiple?: (urls: string[]) => void;
     folder?: string;
     className?: string;
     description?: string;
     isDark?: boolean;
+    multiple?: boolean;
 }
 
-export default function ImageUpload({ onUpload, folder = "uploads", className = "", description = "Click to upload image", isDark = false }: ImageUploadProps) {
+export default function ImageUpload({ 
+    onUpload, 
+    onUploadMultiple,
+    folder = "uploads", 
+    className = "", 
+    description = "Click or drag & drop to upload", 
+    isDark = false,
+    multiple = false
+}: ImageUploadProps) {
     const [uploading, setUploading] = useState(false);
     const [progress, setProgress] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+    const processFiles = async (files: FileList | File[]) => {
+        if (!files || files.length === 0) return;
 
         setUploading(true);
         setProgress(0);
 
         try {
-            // Create a unique filename
-            const timestamp = Date.now();
-            const filename = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-            const storageRef = ref(storage, `${folder}/${filename}`);
+            const filesArray = Array.from(files);
+            const urls: string[] = [];
+            
+            let completed = 0;
 
-            const uploadTask = uploadBytesResumable(storageRef, file);
+            for (const file of filesArray) {
+                const timestamp = Date.now();
+                const filename = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+                const storageRef = ref(storage, `${folder}/${filename}`);
 
-            uploadTask.on('state_changed',
-                (snapshot) => {
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    setProgress(progress);
-                },
-                (error) => {
-                    console.error("Upload error:", error);
-                    alert("Failed to upload image.");
-                    setUploading(false);
-                },
-                async () => {
-                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                    onUpload(downloadURL);
-                    setUploading(false);
-                    // Reset input
-                    if (fileInputRef.current) {
-                        fileInputRef.current.value = "";
-                    }
-                }
-            );
+                const uploadTask = uploadBytesResumable(storageRef, file);
+
+                await new Promise<void>((resolve, reject) => {
+                    uploadTask.on('state_changed',
+                        (snapshot) => {
+                            const p = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                            // Calculate total progress across all files
+                            setProgress(((completed * 100) + p) / filesArray.length);
+                        },
+                        (error) => {
+                            console.error("Upload error:", error);
+                            reject(error);
+                        },
+                        async () => {
+                            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                            urls.push(downloadURL);
+                            if (onUpload && !multiple) {
+                                onUpload(downloadURL);
+                            }
+                            completed++;
+                            resolve();
+                        }
+                    );
+                });
+            }
+
+            if (multiple && onUploadMultiple) {
+                onUploadMultiple(urls);
+            }
+
+            setUploading(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
         } catch (error) {
             console.error("Error starting upload:", error);
+            alert("Failed to upload image(s).");
             setUploading(false);
+        }
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            processFiles(e.target.files);
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!uploading) {
+            setIsDragging(true);
+        }
+    };
+
+    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        
+        if (uploading) return;
+        
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+            if (files.length > 0) {
+                processFiles(multiple ? files : [files[0]]);
+            }
         }
     };
 
     return (
         <div
             onClick={() => !uploading && fileInputRef.current?.click()}
-            className={`cursor-pointer group relative overflow-hidden transition-all border-2 border-dashed rounded-xl ${isDark
-                    ? 'border-slate-700 hover:border-slate-500 hover:bg-slate-800/50'
-                    : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`cursor-pointer group relative overflow-hidden transition-all border-2 border-dashed rounded-xl ${
+                isDragging 
+                    ? 'border-orange-500 bg-orange-500/10' 
+                    : isDark
+                        ? 'border-slate-700 hover:border-slate-500 hover:bg-slate-800/50'
+                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                 } ${className}`}
         >
             <input
@@ -72,6 +141,7 @@ export default function ImageUpload({ onUpload, folder = "uploads", className = 
                 ref={fileInputRef}
                 onChange={handleFileSelect}
                 accept="image/*"
+                multiple={multiple}
                 className="hidden"
             />
 
@@ -93,12 +163,12 @@ export default function ImageUpload({ onUpload, folder = "uploads", className = 
                     </div>
                 ) : (
                     <>
-                        <div className={`p-3 rounded-full transition-colors ${isDark ? 'bg-slate-800 group-hover:bg-slate-700' : 'bg-slate-100 group-hover:bg-slate-200'
+                        <div className={`p-3 rounded-full transition-colors ${isDragging ? 'bg-orange-500/20' : isDark ? 'bg-slate-800 group-hover:bg-slate-700' : 'bg-slate-100 group-hover:bg-slate-200'
                             }`}>
-                            <Upload className={`w-6 h-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
+                            <Upload className={`w-6 h-6 ${isDragging ? 'text-orange-500' : isDark ? 'text-slate-400' : 'text-slate-500'}`} />
                         </div>
                         <div className="space-y-1">
-                            <p className={`text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                            <p className={`text-sm font-medium ${isDragging ? 'text-orange-500' : isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                                 {description}
                             </p>
                             <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>

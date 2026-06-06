@@ -6,6 +6,7 @@ import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
 import { useTranslations, useLocale } from 'next-intl';
+import { formatDateRange, formatTimeRange, isMultiDay as checkMultiDay, calculateDuration, toDate } from '@/lib/date-utils';
 
 import ImageLightbox from '@/components/ImageLightbox';
 
@@ -14,6 +15,10 @@ interface EventDetail {
     title: string;
     description: string;
     eventDate: Timestamp;
+    endDate?: Timestamp;
+    startTime?: string | null;
+    endTime?: string | null;
+    hasTime?: boolean;
     location: string;
     imageUrl?: string;
     photos?: string[];
@@ -149,29 +154,49 @@ export default function EventDetailPage() {
 
                     {/* Info Box */}
                     <div className="md:w-1/2 text-center md:text-left">
-                        <time className="text-saffron-dark font-black text-sm uppercase tracking-[0.2em] mb-4 block">
-                            {event.eventDate?.toDate().toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                        </time>
-                        <h1 className="text-4xl md:text-5xl font-black text-foreground font-display mb-8 leading-[1.1]">
-                            {event.title}
-                        </h1>
+                        {(() => {
+                            const startDate = event.eventDate?.toDate();
+                            const endDate = event.endDate ? toDate(event.endDate) : startDate;
+                            const multi = checkMultiDay(startDate, endDate);
+                            const duration = multi ? calculateDuration(startDate, endDate) : 1;
+                            const dateRangeStr = formatDateRange(startDate, endDate, locale);
+                            const timeRangeStr = event.hasTime ? formatTimeRange(event.startTime, event.endTime, locale) : null;
 
-                        <div className="flex flex-col gap-4 text-muted mb-10">
-                            <div className="flex items-center gap-3 justify-center md:justify-start">
-                                <div className="w-10 h-10 bg-muted/10 rounded-full flex items-center justify-center text-saffron-dark">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" /></svg>
-                                </div>
-                                <span className="font-black text-foreground">
-                                    {event.eventDate?.toDate().toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-3 justify-center md:justify-start">
-                                <div className="w-10 h-10 bg-muted/10 rounded-full flex items-center justify-center text-saffron-dark">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>
-                                </div>
-                                <span className="font-black text-foreground">{event.location}</span>
-                            </div>
-                        </div>
+                            return (
+                                <>
+                                    <time className="text-saffron-dark font-black text-sm uppercase tracking-[0.2em] mb-2 block">
+                                        {dateRangeStr}
+                                    </time>
+                                    {multi && (
+                                        <div className="inline-flex items-center gap-2 px-4 py-1 bg-saffron/10 text-saffron-dark rounded-full text-[10px] font-black uppercase tracking-[0.15em] mb-4 border border-saffron/20">
+                                            {duration} Days
+                                        </div>
+                                    )}
+                                    <h1 className="text-4xl md:text-5xl font-black text-foreground font-display mb-8 leading-[1.1]">
+                                        {event.title}
+                                    </h1>
+
+                                    <div className="flex flex-col gap-4 text-muted mb-10">
+                                        {timeRangeStr && (
+                                            <div className="flex items-center gap-3 justify-center md:justify-start">
+                                                <div className="w-10 h-10 bg-muted/10 rounded-full flex items-center justify-center text-saffron-dark">
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" /></svg>
+                                                </div>
+                                                <span className="font-black text-foreground">
+                                                    {timeRangeStr}
+                                                </span>
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-3 justify-center md:justify-start">
+                                            <div className="w-10 h-10 bg-muted/10 rounded-full flex items-center justify-center text-saffron-dark">
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" /></svg>
+                                            </div>
+                                            <span className="font-black text-foreground">{event.location}</span>
+                                        </div>
+                                    </div>
+                                </>
+                            );
+                        })()}
 
                         {!isPast ? (
                             <div className="flex flex-col sm:flex-row gap-4">

@@ -117,12 +117,12 @@ export default function TipForm({ initialData, onCancel }: TipFormProps) {
     };
 
     const inputClasses = `w-full rounded-xl py-3 px-4 outline-none transition-all focus:ring-2 focus:ring-orange-500/50 ${isDark
-            ? 'bg-slate-900 border-none text-white placeholder:text-slate-500'
+            ? 'bg-zinc-950 border-none text-white placeholder:text-slate-500'
             : 'bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-500'
         }`;
 
     return (
-        <form onSubmit={handleSubmit} className={`flex flex-col h-full border-t animate-in slide-in-from-right duration-300 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'
+        <form onSubmit={handleSubmit} className={`flex flex-col h-full border-t animate-in slide-in-from-right duration-300 ${isDark ? 'bg-zinc-950 border-slate-800' : 'bg-slate-50 border-slate-200'
             }`}>
             <div className="flex-1 overflow-y-auto p-8">
                 <div className="max-w-2xl mx-auto space-y-8">
@@ -142,14 +142,14 @@ export default function TipForm({ initialData, onCancel }: TipFormProps) {
                                     {isDeleting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
                                 </button>
                             )}
-                            <button type="button" onClick={onCancel} className={`p-2.5 rounded-xl transition-colors ${isDark ? 'text-slate-500 hover:bg-slate-800' : 'text-slate-400 hover:bg-slate-200'
+                            <button type="button" onClick={onCancel} className={`p-2.5 rounded-xl transition-colors ${isDark ? 'text-slate-500 hover:bg-zinc-900' : 'text-slate-400 hover:bg-slate-200'
                                 }`}>
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
                     </div>
 
-                    <div className={`space-y-6 p-6 rounded-2xl border ${isDark ? 'bg-slate-800/20 border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'
+                    <div className={`space-y-6 p-6 rounded-2xl border ${isDark ? 'bg-zinc-900/20 border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'
                         }`}>
                         <div className="grid grid-cols-4 gap-6">
                             <div className="space-y-2">
@@ -185,7 +185,7 @@ export default function TipForm({ initialData, onCancel }: TipFormProps) {
                                 required
                                 rows={8}
                                 className={`w-full rounded-2xl py-4 px-4 resize-none leading-relaxed focus:ring-2 focus:ring-orange-500/50 outline-none transition-all ${isDark
-                                        ? 'bg-slate-900 border-none text-white placeholder:text-slate-500'
+                                        ? 'bg-zinc-950 border-none text-white placeholder:text-slate-500'
                                         : 'bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-500'
                                     }`}
                                 placeholder="Explain exactly how to perform this meditation step..."
@@ -203,9 +203,9 @@ export default function TipForm({ initialData, onCancel }: TipFormProps) {
                                         className={`flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${status === s
                                                 ? isDark
                                                     ? "bg-slate-700 border-slate-500 text-white"
-                                                    : "bg-slate-800 text-white border-slate-700"
+                                                    : "bg-zinc-900 text-white border-slate-700"
                                                 : isDark
-                                                    ? "bg-slate-900 border-slate-800 text-slate-600 hover:text-slate-400"
+                                                    ? "bg-zinc-950 border-slate-800 text-slate-600 hover:text-slate-400"
                                                     : "bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-600"
                                             }`}
                                     >
@@ -218,13 +218,13 @@ export default function TipForm({ initialData, onCancel }: TipFormProps) {
                 </div>
             </div>
 
-            <div className={`p-6 border-t ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+            <div className={`p-6 border-t ${isDark ? 'bg-zinc-950 border-slate-800' : 'bg-white border-slate-200'
                 }`}>
                 <div className="max-w-2xl mx-auto flex gap-4">
                     <button
                         type="button"
                         onClick={onCancel}
-                        className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all ${isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                        className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all ${isDark ? 'bg-zinc-900 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
                             }`}
                     >
                         Cancel

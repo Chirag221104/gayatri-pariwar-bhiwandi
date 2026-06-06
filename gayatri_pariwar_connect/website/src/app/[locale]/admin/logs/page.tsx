@@ -10,11 +10,14 @@ import {
     Database,
     Eye,
     X,
-    ChevronDown
+    Newspaper,
+    Sprout,
+    Users
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, query, orderBy, onSnapshot, limit } from "firebase/firestore";
 import AdminTable from "@/components/admin/AdminTable";
+import { useAdminTheme } from "@/hooks/useAdminTheme";
 
 interface AdminLog {
     id: string;
@@ -28,29 +31,58 @@ interface AdminLog {
     previousData?: any;
     newData?: any;
     platform: string;
+    domain?: 'granthalaya' | 'app';
 }
 
-export default function AdminLogsPage() {
+// Collections that belong to Granthalaya domain (to be excluded)
+const GRANTHALAYA_COLLECTIONS = [
+    'granthalaya_app',
+    'books',
+    'books_inventory',
+    'inventory',
+    'inventory_logs',
+    'orders',
+    'sections',
+    'tags',
+    'categories',
+    'digital_library'
+];
+
+export default function AppLogsPage() {
     const [logs, setLogs] = useState<AdminLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [actionFilter, setActionFilter] = useState("all");
     const [collectionFilter, setCollectionFilter] = useState("all");
     const [selectedLog, setSelectedLog] = useState<AdminLog | null>(null);
+    const { isDark } = useAdminTheme();
 
     useEffect(() => {
         const q = query(
             collection(db, "admin_logs"),
             orderBy("timestamp", "desc"),
-            limit(100)
+            limit(200)
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({
+            const allData = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             })) as AdminLog[];
-            setLogs(data);
+
+            // Filter to App-related logs only (exclude Granthalaya)
+            const filtered = allData.filter(log => {
+                // Check domain field first (future-proofing)
+                if (log.domain === 'app') return true;
+                if (log.domain === 'granthalaya') return false;
+
+                // Fallback to collection name matching - exclude Granthalaya collections
+                return !GRANTHALAYA_COLLECTIONS.some(c =>
+                    log.collection?.toLowerCase().includes(c.toLowerCase())
+                );
+            });
+
+            setLogs(filtered);
             setLoading(false);
         }, (error) => {
             console.error("Error fetching logs:", error);
@@ -77,9 +109,9 @@ export default function AdminLogsPage() {
                 <div className="flex flex-col gap-1 min-w-[200px]">
                     <div className="flex items-center gap-2">
                         <User className="w-3 h-3 text-slate-500" />
-                        <span className="text-xs font-bold text-slate-200">{item.adminEmail}</span>
+                        <span className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>{item.adminEmail}</span>
                     </div>
-                    <span className="text-[10px] text-slate-400 font-medium italic">{item.details}</span>
+                    <span className={`text-[10px] font-medium italic ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{item.details}</span>
                 </div>
             )
         },
@@ -87,8 +119,8 @@ export default function AdminLogsPage() {
             header: "Action",
             accessor: (item: AdminLog) => (
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${item.action === 'CREATE' ? "bg-emerald-500/10 text-emerald-500" :
-                        item.action === 'UPDATE' ? "bg-blue-500/10 text-blue-500" :
-                            "bg-red-500/10 text-red-500"
+                    item.action === 'UPDATE' ? "bg-blue-500/10 text-blue-500" :
+                        "bg-red-500/10 text-red-500"
                     }`}>
                     {item.action}
                 </span>
@@ -99,14 +131,14 @@ export default function AdminLogsPage() {
             accessor: (item: AdminLog) => (
                 <div className="flex items-center gap-2">
                     <Database className="w-3 h-3 text-slate-500" />
-                    <span className="text-[10px] font-mono text-slate-300 capitalize">{item.collection.replace(/_/g, ' ')}</span>
+                    <span className={`text-[10px] font-mono capitalize ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{item.collection?.replace(/_/g, ' ')}</span>
                 </div>
             )
         },
         {
             header: "Time",
             accessor: (item: AdminLog) => (
-                <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                <div className={`flex items-center gap-2 text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                     <Calendar className="w-3 h-3" />
                     <span className="font-mono">
                         {item.timestamp?.toDate ? item.timestamp.toDate().toLocaleString() : 'Recent'}
@@ -120,11 +152,27 @@ export default function AdminLogsPage() {
         <div className="space-y-8 h-[calc(100vh-8rem)] flex flex-col">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-white flex items-center gap-4">
+                    <h1 className={`text-3xl font-bold flex items-center gap-4 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                         <History className="w-8 h-8 text-orange-500" />
-                        Admin Audit Logs
+                        App Logs
                     </h1>
-                    <p className="text-slate-400 mt-2">Transparent tracking of all administrative modifications</p>
+                    <p className={`mt-2 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Activity tracking for Gayatri App modules</p>
+
+                    {/* Scope Badge */}
+                    <div className="flex items-center gap-2 mt-3">
+                        <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Showing:</span>
+                        <div className="flex items-center gap-1">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-500 text-[10px] font-bold">
+                                <Calendar className="w-3 h-3" /> Events
+                            </span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-500 text-[10px] font-bold">
+                                <Newspaper className="w-3 h-3" /> Content
+                            </span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-500 text-[10px] font-bold">
+                                <Users className="w-3 h-3" /> Groups
+                            </span>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
@@ -135,16 +183,21 @@ export default function AdminLogsPage() {
                             placeholder="Search admin or activity..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="bg-slate-900 border border-slate-800 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:outline-none focus:ring-1 focus:ring-orange-500/50 w-64 transition-all"
+                            className={`border rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500/50 w-64 transition-all ${isDark
+                                    ? 'bg-slate-900 border-slate-800 text-white'
+                                    : 'bg-white border-slate-200 text-slate-900'
+                                }`}
                         />
                     </div>
 
-                    <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5">
+                    <div className={`flex items-center gap-2 border rounded-xl px-3 py-1.5 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+                        }`}>
                         <Filter className="w-4 h-4 text-slate-500" />
                         <select
                             value={actionFilter}
                             onChange={(e) => setActionFilter(e.target.value)}
-                            className="bg-transparent border-none text-xs text-slate-300 focus:ring-0 outline-none cursor-pointer"
+                            className={`bg-transparent border-none text-xs focus:ring-0 outline-none cursor-pointer ${isDark ? 'text-slate-300' : 'text-slate-600'
+                                }`}
                         >
                             <option value="all">All Actions</option>
                             <option value="CREATE">Create</option>
@@ -153,52 +206,57 @@ export default function AdminLogsPage() {
                         </select>
                     </div>
 
-                    <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5">
+                    <div className={`flex items-center gap-2 border rounded-xl px-3 py-1.5 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+                        }`}>
                         <Database className="w-4 h-4 text-slate-500" />
                         <select
                             value={collectionFilter}
                             onChange={(e) => setCollectionFilter(e.target.value)}
-                            className="bg-transparent border-none text-xs text-slate-300 focus:ring-0 outline-none cursor-pointer"
+                            className={`bg-transparent border-none text-xs focus:ring-0 outline-none cursor-pointer ${isDark ? 'text-slate-300' : 'text-slate-600'
+                                }`}
                         >
                             <option value="all">All Collections</option>
                             {uniqueCollections.map(c => (
-                                <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>
+                                <option key={c} value={c}>{c?.replace(/_/g, ' ')}</option>
                             ))}
                         </select>
                     </div>
                 </div>
             </div>
 
-            <div className="flex-1 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden relative">
+            <div className={`flex-1 min-h-0 border rounded-2xl overflow-hidden relative ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+                }`}>
                 <AdminTable
                     columns={columns}
                     data={filteredLogs}
                     loading={loading}
                     onRowClick={(log) => setSelectedLog(log)}
-                    emptyMessage="No audit logs found. System is quiet."
+                    emptyMessage="No app logs found. System is quiet."
                 />
 
                 {/* Log Detail Modal */}
                 {selectedLog && (
                     <div className="absolute inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-6 lg:p-12 animate-in fade-in duration-200">
-                        <div className="bg-[#0f172a] border border-slate-800 rounded-3xl w-full max-w-4xl max-h-full flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className={`border rounded-3xl w-full max-w-4xl max-h-full flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 ${isDark ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'
+                            }`}>
                             {/* Modal Header */}
-                            <div className="p-6 border-b border-slate-800 flex items-center justify-between shrink-0">
+                            <div className={`p-6 border-b flex items-center justify-between shrink-0 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
                                 <div className="flex items-center gap-4">
                                     <div className={`p-3 rounded-2xl ${selectedLog.action === 'CREATE' ? "bg-emerald-500/10 text-emerald-500" :
-                                            selectedLog.action === 'UPDATE' ? "bg-blue-500/10 text-blue-500" :
-                                                "bg-red-500/10 text-red-500"
+                                        selectedLog.action === 'UPDATE' ? "bg-blue-500/10 text-blue-500" :
+                                            "bg-red-500/10 text-red-500"
                                         }`}>
                                         <Eye className="w-6 h-6" />
                                     </div>
                                     <div>
-                                        <h3 className="text-xl font-bold text-white">Log Details</h3>
-                                        <p className="text-xs text-slate-500 font-mono">{selectedLog.id}</p>
+                                        <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Log Details</h3>
+                                        <p className={`text-xs font-mono ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{selectedLog.id}</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setSelectedLog(null)}
-                                    className="p-2 text-slate-500 hover:text-white hover:bg-slate-800 rounded-full transition-all"
+                                    className={`p-2 rounded-full transition-all ${isDark ? 'text-slate-500 hover:text-white hover:bg-slate-800' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'
+                                        }`}
                                 >
                                     <X className="w-6 h-6" />
                                 </button>
@@ -208,31 +266,35 @@ export default function AdminLogsPage() {
                             <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Performed By</label>
-                                        <div className="bg-slate-900/50 p-3 rounded-xl border border-white/5 flex items-center gap-3">
+                                        <label className={`text-[10px] font-bold uppercase tracking-widest px-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Performed By</label>
+                                        <div className={`p-3 rounded-xl border flex items-center gap-3 ${isDark ? 'bg-slate-900/50 border-white/5' : 'bg-slate-50 border-slate-200'
+                                            }`}>
                                             <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500 font-bold">
                                                 {selectedLog.adminEmail[0].toUpperCase()}
                                             </div>
-                                            <span className="text-sm font-medium text-slate-200">{selectedLog.adminEmail}</span>
+                                            <span className={`text-sm font-medium ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>{selectedLog.adminEmail}</span>
                                         </div>
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Context</label>
-                                        <div className="bg-slate-900/50 p-3 rounded-xl border border-white/5 flex items-center gap-3">
-                                            <Database className="w-4 h-4 text-blue-500" />
-                                            <span className="text-sm font-mono text-blue-400 capitalize">{selectedLog.collection}</span>
+                                        <label className={`text-[10px] font-bold uppercase tracking-widest px-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Context</label>
+                                        <div className={`p-3 rounded-xl border flex items-center gap-3 ${isDark ? 'bg-slate-900/50 border-white/5' : 'bg-slate-50 border-slate-200'
+                                            }`}>
+                                            <Database className="w-4 h-4 text-orange-500" />
+                                            <span className="text-sm font-mono text-orange-400 capitalize">{selectedLog.collection}</span>
                                         </div>
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Document ID</label>
-                                        <div className="bg-slate-900/50 p-3 rounded-xl border border-white/5 font-mono text-xs text-slate-400 truncate">
+                                        <label className={`text-[10px] font-bold uppercase tracking-widest px-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Document ID</label>
+                                        <div className={`p-3 rounded-xl border font-mono text-xs truncate ${isDark ? 'bg-slate-900/50 border-white/5 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-500'
+                                            }`}>
                                             {selectedLog.documentId}
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="space-y-6">
-                                    <h4 className="text-sm font-bold text-slate-400 flex items-center gap-2 border-b border-slate-800 pb-2">
+                                    <h4 className={`text-sm font-bold flex items-center gap-2 border-b pb-2 ${isDark ? 'text-slate-400 border-slate-800' : 'text-slate-500 border-slate-200'
+                                        }`}>
                                         <div className="w-1 h-4 bg-orange-500 rounded-full" />
                                         Data Transition
                                     </h4>
@@ -240,7 +302,8 @@ export default function AdminLogsPage() {
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                         <div className="space-y-3">
                                             <label className="text-[10px] font-bold text-red-500/70 uppercase tracking-widest pl-1">Previous State</label>
-                                            <div className="bg-slate-950 rounded-2xl p-4 border border-red-500/10 h-80 overflow-y-auto text-[10px] font-mono leading-relaxed custom-scrollbar">
+                                            <div className={`rounded-2xl p-4 border h-80 overflow-y-auto text-[10px] font-mono leading-relaxed custom-scrollbar ${isDark ? 'bg-slate-950 border-red-500/10' : 'bg-red-50 border-red-200'
+                                                }`}>
                                                 {selectedLog.previousData ? (
                                                     <pre className="text-red-400/80 whitespace-pre-wrap">{JSON.stringify(selectedLog.previousData, null, 2)}</pre>
                                                 ) : (
@@ -253,7 +316,8 @@ export default function AdminLogsPage() {
                                         </div>
                                         <div className="space-y-3">
                                             <label className="text-[10px] font-bold text-emerald-500/70 uppercase tracking-widest pl-1">New State</label>
-                                            <div className="bg-slate-950 rounded-2xl p-4 border border-emerald-500/10 h-80 overflow-y-auto text-[10px] font-mono leading-relaxed custom-scrollbar">
+                                            <div className={`rounded-2xl p-4 border h-80 overflow-y-auto text-[10px] font-mono leading-relaxed custom-scrollbar ${isDark ? 'bg-slate-950 border-emerald-500/10' : 'bg-emerald-50 border-emerald-200'
+                                                }`}>
                                                 {selectedLog.newData ? (
                                                     <pre className="text-emerald-400/80 whitespace-pre-wrap">{JSON.stringify(selectedLog.newData, null, 2)}</pre>
                                                 ) : (

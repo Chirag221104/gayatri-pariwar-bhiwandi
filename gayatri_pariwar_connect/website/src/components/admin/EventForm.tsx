@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
     Save,
     X,
@@ -14,7 +14,10 @@ import {
     Folder,
     Users,
     Search,
-    ChevronDown
+    ChevronDown,
+    Clock,
+    CalendarRange,
+    AlertCircle
 } from "lucide-react";
 import ImageUpload from "@/components/admin/ImageUpload";
 import { Timestamp } from "firebase/firestore";
@@ -27,6 +30,10 @@ interface GlobalEvent {
     description: string;
     location: string;
     eventDate: any;
+    endDate?: any;
+    startTime?: string | null;
+    endTime?: string | null;
+    hasTime?: boolean;
     photos: string[];
     contactName?: string;
     contactPhone?: string;
@@ -71,12 +78,30 @@ export default function EventForm({ initialData, onSave, onCancel, isSaving }: E
     const [location, setLocation] = useState(initialData?.location || "");
 
     // Initialize date from Timestamp or Date string
-    const initialDate = initialData?.eventDate
+    const initialStartDate = initialData?.eventDate
         ? (initialData.eventDate instanceof Timestamp ? initialData.eventDate.toDate() : new Date(initialData.eventDate))
         : new Date();
+    const initialEndDate = initialData?.endDate
+        ? (initialData.endDate instanceof Timestamp ? initialData.endDate.toDate() : new Date(initialData.endDate))
+        : initialStartDate;
 
-    const [eventDate, setEventDate] = useState(initialDate.toISOString().split('T')[0]);
-    const [eventTime, setEventTime] = useState(initialDate.toTimeString().slice(0, 5));
+    const [startDate, setStartDate] = useState(initialStartDate.toISOString().split('T')[0]);
+    const [endDateStr, setEndDateStr] = useState(initialEndDate.toISOString().split('T')[0]);
+
+    // Multi-day toggle: derived from whether start and end differ
+    const initMultiDay = initialData?.endDate
+        ? initialEndDate.toISOString().split('T')[0] !== initialStartDate.toISOString().split('T')[0]
+        : false;
+    const [isMultiDay, setIsMultiDay] = useState(initMultiDay);
+
+    // Time fields as strings (or null)
+    const initHasTime = initialData?.hasTime ?? (initialData?.startTime != null);
+    const [hasTime, setHasTime] = useState(initHasTime);
+    const [startTime, setStartTime] = useState<string>(initialData?.startTime || initialStartDate.toTimeString().slice(0, 5));
+    const [endTime, setEndTime] = useState<string>(initialData?.endTime || initialEndDate.toTimeString().slice(0, 5));
+
+    // Validation error
+    const [validationError, setValidationError] = useState<string | null>(null);
 
     const [contactName, setContactName] = useState(initialData?.contactName || "");
     const [contactPhone, setContactPhone] = useState(initialData?.contactPhone || "");
@@ -187,14 +212,42 @@ export default function EventForm({ initialData, onSave, onCancel, isSaving }: E
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setValidationError(null);
 
-        const combinedDate = new Date(`${eventDate}T${eventTime}`);
+        const effectiveEndDate = isMultiDay ? endDateStr : startDate;
+
+        // Validation: End date must not be before start date
+        if (effectiveEndDate < startDate) {
+            setValidationError("End date cannot be before start date.");
+            return;
+        }
+
+        // Validation: Same-day time check
+        if (hasTime && effectiveEndDate === startDate && endTime && startTime && endTime <= startTime) {
+            setValidationError("End time must be after start time on the same day.");
+            return;
+        }
+
+        // Build start date timestamp (with time for backward compat)
+        const startDateObj = hasTime
+            ? new Date(`${startDate}T${startTime}`)
+            : new Date(`${startDate}T00:00:00`);
+
+        // Build end date timestamp
+        const endDateObj = hasTime && endTime
+            ? new Date(`${effectiveEndDate}T${endTime}`)
+            : new Date(`${effectiveEndDate}T23:59:59`);
 
         await onSave({
             title,
             description,
             location,
-            eventDate: Timestamp.fromDate(combinedDate),
+            // Backward-compatible: eventDate = start datetime
+            eventDate: Timestamp.fromDate(startDateObj),
+            endDate: Timestamp.fromDate(endDateObj),
+            startTime: hasTime ? startTime : null,
+            endTime: hasTime ? endTime : null,
+            hasTime,
             photos,
             contactName,
             contactPhone,
@@ -228,18 +281,18 @@ export default function EventForm({ initialData, onSave, onCancel, isSaving }: E
     ).slice(0, 5);
 
     const inputClasses = `w-full rounded-xl py-3 px-4 outline-none transition-all focus:ring-2 focus:ring-orange-500/50 ${isDark
-        ? 'bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-slate-500'
+        ? 'bg-zinc-950 border border-zinc-800 text-white placeholder:text-zinc-600 focus:bg-zinc-900/50'
         : 'bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-500'
         }`;
 
-    const labelClasses = `text-xs font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'
+    const labelClasses = `text-xs font-bold uppercase tracking-wider ${isDark ? 'text-zinc-500' : 'text-slate-500'
         }`;
 
-    const cardClasses = `p-6 rounded-2xl space-y-4 border ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+    const cardClasses = `p-6 rounded-2xl space-y-4 border ${isDark ? 'bg-zinc-900/50 backdrop-blur-xl border-zinc-800' : 'bg-white border-slate-200 shadow-sm'
         }`;
 
     const selectClasses = `w-full rounded-xl py-3 px-4 outline-none transition-all focus:ring-2 focus:ring-orange-500/50 appearance-none cursor-pointer ${isDark
-        ? 'bg-slate-800/50 border border-slate-700/50 text-white'
+        ? 'bg-zinc-950 border border-zinc-800 text-white focus:bg-zinc-900/50'
         : 'bg-white border border-slate-200 text-slate-900 focus:border-orange-500'
         }`;
 
@@ -299,31 +352,116 @@ export default function EventForm({ initialData, onSave, onCancel, isSaving }: E
                             Date & Time
                         </h2>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        {/* Toggles */}
+                        <div className="flex flex-wrap gap-3">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const next = !isMultiDay;
+                                    setIsMultiDay(next);
+                                    if (!next) setEndDateStr(startDate);
+                                    setIsDirty(true);
+                                }}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                                    isMultiDay
+                                        ? 'bg-orange-500/10 border-orange-500/30 text-orange-500'
+                                        : isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300' : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-700'
+                                }`}
+                            >
+                                <CalendarRange className="w-3.5 h-3.5" />
+                                Multi-day Event
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { setHasTime(!hasTime); setIsDirty(true); }}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                                    hasTime
+                                        ? 'bg-orange-500/10 border-orange-500/30 text-orange-500'
+                                        : isDark ? 'bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300' : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-700'
+                                }`}
+                            >
+                                <Clock className="w-3.5 h-3.5" />
+                                Include Timing
+                            </button>
+                        </div>
+
+                        {/* Date Fields */}
+                        <div className={`grid ${isMultiDay ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
                             <div className="space-y-2">
-                                <label className={labelClasses}>Date</label>
+                                <label className={labelClasses}>{isMultiDay ? 'Start Date' : 'Date'}</label>
                                 <div className="relative">
                                     <CalendarIcon className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
                                     <input
                                         type="date"
-                                        value={eventDate}
-                                        onChange={(e) => { setEventDate(e.target.value); setIsDirty(true); }}
+                                        value={startDate}
+                                        onChange={(e) => {
+                                            setStartDate(e.target.value);
+                                            if (!isMultiDay) setEndDateStr(e.target.value);
+                                            setIsDirty(true);
+                                        }}
                                         required
                                         className={`${inputClasses} pl-10`}
+                                        style={{ colorScheme: isDark ? 'dark' : 'light' }}
                                     />
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <label className={labelClasses}>Time</label>
-                                <input
-                                    type="time"
-                                    value={eventTime}
-                                    onChange={(e) => { setEventTime(e.target.value); setIsDirty(true); }}
-                                    required
-                                    className={inputClasses}
-                                />
-                            </div>
+                            {isMultiDay && (
+                                <div className="space-y-2">
+                                    <label className={labelClasses}>End Date</label>
+                                    <div className="relative">
+                                        <CalendarIcon className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+                                        <input
+                                            type="date"
+                                            value={endDateStr}
+                                            min={startDate}
+                                            onChange={(e) => { setEndDateStr(e.target.value); setIsDirty(true); }}
+                                            required
+                                            className={`${inputClasses} pl-10`}
+                                            style={{ colorScheme: isDark ? 'dark' : 'light' }}
+                                        />
+                                    </div>
+                                    {startDate && endDateStr && new Date(endDateStr) >= new Date(startDate) && (
+                                        <p className={`text-[10px] font-bold ${isDark ? 'text-orange-400' : 'text-orange-600'}`}>
+                                            Event spans {Math.round((new Date(endDateStr).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} day(s)
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                         </div>
+
+                        {/* Time Fields (conditional) */}
+                        {hasTime && (
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className={labelClasses}>Start Time</label>
+                                    <input
+                                        type="time"
+                                        value={startTime}
+                                        onChange={(e) => { setStartTime(e.target.value); setIsDirty(true); }}
+                                        className={inputClasses}
+                                        style={{ colorScheme: isDark ? 'dark' : 'light' }}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className={labelClasses}>End Time</label>
+                                    <input
+                                        type="time"
+                                        value={endTime}
+                                        onChange={(e) => { setEndTime(e.target.value); setIsDirty(true); }}
+                                        className={inputClasses}
+                                        style={{ colorScheme: isDark ? 'dark' : 'light' }}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Validation Error */}
+                        {validationError && (
+                            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold">
+                                <AlertCircle className="w-4 h-4 shrink-0" />
+                                {validationError}
+                            </div>
+                        )}
                     </div>
 
                     {/* Link to Media Folder - WHITE CARD */}
@@ -614,13 +752,14 @@ export default function EventForm({ initialData, onSave, onCancel, isSaving }: E
 
                         <div className="space-y-4">
                             <ImageUpload
-                                onUpload={(url) => {
-                                    setPhotos([...photos, url]);
+                                onUploadMultiple={(urls) => {
+                                    setPhotos([...photos, ...urls]);
                                     setIsDirty(true);
                                 }}
+                                multiple={true}
                                 folder="events"
                                 isDark={isDark}
-                                description="Add Event Photo"
+                                description="Add Event Photos (Drag & Drop or Click)"
                                 className="h-32"
                             />
 

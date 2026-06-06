@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import AdminTable from "@/components/admin/AdminTable";
 import SectionHeader from "@/components/ui/SectionHeader";
+import StatusBadge from "@/components/ui/StatusBadge";
 
 interface NewsItem {
     id: string;
@@ -68,13 +69,15 @@ export default function NewsManagementPage() {
         item.category.toLowerCase().includes(search.toLowerCase())
     );
 
-    const getStatusStyles = (status: string) => {
+    const getStatusBadge = (status: string) => {
+        let variant: any = "info";
         switch (status?.toLowerCase()) {
-            case 'published': return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
-            case 'draft': return isDark ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-500 border-slate-200';
-            case 'scheduled': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-            default: return isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500';
+            case 'published': variant = "published"; break;
+            case 'draft': variant = "draft"; break;
+            case 'scheduled': variant = "info"; break;
+            case 'archived': variant = "unavailable"; break;
         }
+        return <StatusBadge variant={variant} label={status} className="font-black" />;
     };
 
     const columns = [
@@ -124,12 +127,8 @@ export default function NewsManagementPage() {
         },
         {
             header: "Status",
-            accessor: (item: NewsItem) => (
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getStatusStyles(item.status)}`}>
-                    {item.status || 'Draft'}
-                </span>
-            )
-        }
+            accessor: (item: NewsItem) => getStatusBadge(item.status)
+        },
     ];
 
     return (

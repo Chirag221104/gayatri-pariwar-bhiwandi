@@ -66,6 +66,8 @@ export default function QuoteForm({ initialData, onCancel }: QuoteFormProps) {
             }
         };
         checkDark();
+        const interval = setInterval(checkDark, 500);
+        return () => clearInterval(interval);
     }, []);
 
     // Validation
@@ -134,12 +136,12 @@ export default function QuoteForm({ initialData, onCancel }: QuoteFormProps) {
     ];
 
     const inputClasses = `w-full rounded-xl py-3 px-4 outline-none transition-all focus:ring-2 focus:ring-orange-500/50 ${isDark
-            ? 'bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-slate-500'
-            : 'bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-500'
+        ? 'bg-zinc-900/50 border border-slate-700/50 text-white placeholder:text-slate-500'
+        : 'bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-orange-500'
         }`;
 
     return (
-        <form onSubmit={handleSubmit} className={`flex flex-col h-full border-t animate-in fade-in slide-in-from-bottom-5 duration-300 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'
+        <form onSubmit={handleSubmit} className={`flex flex-col h-full border-t animate-in fade-in slide-in-from-bottom-5 duration-300 ${isDark ? 'bg-zinc-950 border-slate-800' : 'bg-slate-50 border-slate-200'
             }`}>
             <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
                 <div className="max-w-4xl mx-auto space-y-10">
@@ -149,7 +151,7 @@ export default function QuoteForm({ initialData, onCancel }: QuoteFormProps) {
                             <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{initialData ? "Edit Quote" : "New Daily Quote"}</h2>
                             <p className="text-slate-500 text-sm">Draft or schedule divine inspiration for the Global Sangha</p>
                         </div>
-                        <button type="button" onClick={onCancel} className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-200 text-slate-500'
+                        <button type="button" onClick={onCancel} className={`p-2 rounded-full transition-colors ${isDark ? 'hover:bg-zinc-900 text-slate-400' : 'hover:bg-slate-200 text-slate-500'
                             }`}>
                             <X className="w-6 h-6" />
                         </button>
@@ -158,9 +160,9 @@ export default function QuoteForm({ initialData, onCancel }: QuoteFormProps) {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                         {/* Main Multi-locale Text Section */}
                         <div className="lg:col-span-2 space-y-6">
-                            <div className={`rounded-2xl border overflow-hidden ${isDark ? 'bg-slate-800/50 border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'
+                            <div className={`rounded-2xl border overflow-hidden ${isDark ? 'bg-zinc-900/50 border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'
                                 }`}>
-                                <div className={`flex border-b ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'
+                                <div className={`flex border-b ${isDark ? 'bg-zinc-900 border-slate-700' : 'bg-slate-50 border-slate-200'
                                     }`}>
                                     {langTabs.map((tab) => (
                                         <button
@@ -168,10 +170,10 @@ export default function QuoteForm({ initialData, onCancel }: QuoteFormProps) {
                                             type="button"
                                             onClick={() => setActiveLang(tab.id)}
                                             className={`flex-1 px-4 py-3 text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${activeLang === tab.id
-                                                    ? isDark
-                                                        ? "bg-slate-900 text-orange-500 border-b-2 border-orange-500"
-                                                        : "bg-white text-orange-600 border-b-2 border-orange-500 shadow-sm"
-                                                    : "text-slate-500 hover:text-slate-400"
+                                                ? isDark
+                                                    ? "bg-zinc-950 text-orange-500 border-b-2 border-orange-500"
+                                                    : "bg-white text-orange-600 border-b-2 border-orange-500 shadow-sm"
+                                                : "text-slate-500 hover:text-slate-400"
                                                 }`}
                                         >
                                             <Globe className="w-3 h-3" />
@@ -234,7 +236,7 @@ export default function QuoteForm({ initialData, onCancel }: QuoteFormProps) {
 
                         {/* Sidebar */}
                         <div className="space-y-6">
-                            <div className={`p-6 rounded-2xl border space-y-4 ${isDark ? 'bg-slate-800/30 border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'
+                            <div className={`p-6 rounded-2xl border space-y-4 ${isDark ? 'bg-zinc-900/30 border-slate-700/50' : 'bg-white border-slate-200 shadow-sm'
                                 }`}>
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
@@ -245,6 +247,7 @@ export default function QuoteForm({ initialData, onCancel }: QuoteFormProps) {
                                         value={date}
                                         onChange={(e) => setDate(e.target.value)}
                                         className={inputClasses}
+                                        style={{ colorScheme: isDark ? 'dark' : 'light' }}
                                     />
                                 </div>
 
@@ -295,10 +298,10 @@ export default function QuoteForm({ initialData, onCancel }: QuoteFormProps) {
                                         type="button"
                                         onClick={() => setStatus("active")}
                                         className={`w-full py-3 rounded-xl text-sm font-bold transition-all border ${status === "active"
-                                                ? "bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/20"
-                                                : isDark
-                                                    ? "bg-slate-900 border-slate-700 text-slate-500 hover:text-slate-300"
-                                                    : "bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-600"
+                                            ? "bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/20"
+                                            : isDark
+                                                ? "bg-zinc-950 border-slate-700 text-slate-500 hover:text-slate-300"
+                                                : "bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-600"
                                             }`}
                                     >
                                         Live Status
@@ -307,12 +310,12 @@ export default function QuoteForm({ initialData, onCancel }: QuoteFormProps) {
                                         type="button"
                                         onClick={() => setStatus("draft")}
                                         className={`w-full py-3 rounded-xl text-sm font-bold transition-all border ${status === "draft"
-                                                ? isDark
-                                                    ? "bg-slate-700 border-slate-600 text-white"
-                                                    : "bg-slate-800 text-white border-slate-700"
-                                                : isDark
-                                                    ? "bg-slate-900 border-slate-700 text-slate-500 hover:text-slate-300"
-                                                    : "bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-600"
+                                            ? isDark
+                                                ? "bg-slate-700 border-slate-600 text-white"
+                                                : "bg-zinc-900 text-white border-slate-700"
+                                            : isDark
+                                                ? "bg-zinc-950 border-slate-700 text-slate-500 hover:text-slate-300"
+                                                : "bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-600"
                                             }`}
                                     >
                                         Draft
@@ -325,13 +328,13 @@ export default function QuoteForm({ initialData, onCancel }: QuoteFormProps) {
             </div>
 
             {/* Footer Actions */}
-            <div className={`p-6 backdrop-blur-md border-t z-30 ${isDark ? 'bg-slate-900/80 border-white/5' : 'bg-white/80 border-slate-200'
+            <div className={`p-6 backdrop-blur-md border-t z-30 ${isDark ? 'bg-zinc-950/80 border-white/5' : 'bg-white/80 border-slate-200'
                 }`}>
                 <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
                     <button
                         type="button"
                         onClick={onCancel}
-                        className={`px-8 py-3 rounded-xl font-bold transition-all ${isDark ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                        className={`px-8 py-3 rounded-xl font-bold transition-all ${isDark ? 'bg-zinc-900 hover:bg-slate-700 text-slate-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
                             }`}
                     >
                         Discard Changes
@@ -340,10 +343,10 @@ export default function QuoteForm({ initialData, onCancel }: QuoteFormProps) {
                         type="submit"
                         disabled={isSaving || (status === 'active' && !canPublish)}
                         className={`px-12 py-3 rounded-xl text-white font-bold transition-all shadow-xl flex items-center gap-2 ${canPublish
-                                ? "bg-gradient-to-r from-orange-600 to-orange-400 hover:from-orange-500 hover:to-orange-300 shadow-orange-500/20"
-                                : status === 'active'
-                                    ? "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
-                                    : "bg-orange-600/50"
+                            ? "bg-gradient-to-r from-orange-600 to-orange-400 hover:from-orange-500 hover:to-orange-300 shadow-orange-500/20"
+                            : status === 'active'
+                                ? "bg-slate-300 dark:bg-slate-700 cursor-not-allowed text-slate-500"
+                                : "bg-orange-600/50"
                             }`}
                     >
                         {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Calendar, MapPin } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, query, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
+import { formatDateRange, isMultiDay as checkMultiDay, calculateDuration } from "@/lib/date-utils";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import AdminTable from "@/components/admin/AdminTable";
@@ -16,6 +17,10 @@ interface GlobalEvent {
     description: string;
     location: string;
     eventDate: any; // Firestore Timestamp
+    endDate?: any;
+    startTime?: string | null;
+    endTime?: string | null;
+    hasTime?: boolean;
     createdBy: string;
     createdAt: any;
 }
@@ -81,15 +86,27 @@ export default function EventsManagementPage() {
         {
             header: "Date",
             accessor: (event: GlobalEvent) => {
-                const date = event.eventDate instanceof Timestamp
+                const startDate = event.eventDate instanceof Timestamp
                     ? event.eventDate.toDate()
                     : new Date(event.eventDate);
+                const endDate = event.endDate
+                    ? (event.endDate instanceof Timestamp ? event.endDate.toDate() : new Date(event.endDate))
+                    : startDate;
+                const multi = checkMultiDay(startDate, endDate);
+                const duration = multi ? calculateDuration(startDate, endDate) : 0;
                 return (
                     <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-orange-500" />
-                        <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>
-                            {date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </span>
+                        <div className="flex flex-col">
+                            <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>
+                                {formatDateRange(startDate, endDate)}
+                            </span>
+                            {multi && (
+                                <span className="text-[10px] font-bold text-orange-500">
+                                    {duration} Days
+                                </span>
+                            )}
+                        </div>
                     </div>
                 );
             }

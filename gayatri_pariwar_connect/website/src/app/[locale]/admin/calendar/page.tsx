@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Settings, Plus, Calendar as CalendarIcon, Moon, Trash2, Edit } from "lucide-react";
+import { Settings, Plus, Calendar as CalendarIcon, Moon, Edit, Trash2 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, query, orderBy, onSnapshot, doc, deleteDoc } from "firebase/firestore";
 import AdminTable from "@/components/admin/AdminTable";
+import SectionHeader from "@/components/ui/SectionHeader";
+import StatusBadge from "@/components/ui/StatusBadge";
 import CalendarEventForm from "@/components/admin/calendar/CalendarEventForm";
 import { logAdminAction } from "@/lib/admin-logger";
 
@@ -118,12 +120,11 @@ export default function FestivalCalendarPage() {
         {
             header: "Status",
             accessor: (item: CalendarEvent) => (
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${item.status === 'active'
-                    ? isDark ? "bg-emerald-500/10 text-emerald-500" : "bg-emerald-50 text-emerald-600"
-                    : isDark ? "bg-slate-800 text-slate-500" : "bg-slate-100 text-slate-500"
-                    }`}>
-                    {item.status}
-                </span>
+                <StatusBadge
+                    variant={item.status === 'active' ? 'active' : 'draft'}
+                    label={item.status}
+                    className="font-black"
+                />
             )
         },
         {

@@ -7,13 +7,18 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslations, useLocale } from 'next-intl';
 import { motion, Variants } from 'framer-motion';
-import { Calendar, MapPin, ArrowRight, Sparkles, Share2 } from 'lucide-react';
+import { Calendar, MapPin, ArrowRight, Sparkles, Share2, Clock } from 'lucide-react';
+import { formatDateRange, formatTimeRange, isMultiDay as checkMultiDay, calculateDuration, toDate } from '@/lib/date-utils';
 
 interface Event {
     id: string;
     title: string;
     description: string;
     eventDate: Timestamp;
+    endDate?: Timestamp;
+    startTime?: string | null;
+    endTime?: string | null;
+    hasTime?: boolean;
     location: string;
     imageUrl?: string;
     photos?: string[];
@@ -255,6 +260,14 @@ function EventCard({ event, now, onShare, onImageClick }: { event: Event, now: n
     const isPast = event.eventDate.toMillis() < now;
     const displayImage = event.imageUrl || (event.photos && event.photos.length > 0 ? event.photos[0] : null);
 
+    // Multi-day and duration logic
+    const startDate = event.eventDate.toDate();
+    const endDate = event.endDate ? toDate(event.endDate) : startDate;
+    const multi = checkMultiDay(startDate, endDate);
+    const duration = multi ? calculateDuration(startDate, endDate) : 1;
+    const dateRangeStr = formatDateRange(startDate, endDate, locale);
+    const timeRangeStr = event.hasTime ? formatTimeRange(event.startTime, event.endTime, locale) : null;
+
     return (
         <motion.div
             variants={itemVariants}
@@ -302,6 +315,13 @@ function EventCard({ event, now, onShare, onImageClick }: { event: Event, now: n
                     {event.type || t('default_type')}
                 </div>
 
+                {/* Duration Badge for multi-day events */}
+                {multi && (
+                    <div className="absolute top-6 left-[calc(6rem+1.5rem)] px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[0.15em] shadow-xl backdrop-blur-md border border-white/20 bg-white/90 dark:bg-slate-900/90 text-saffron-dark">
+                        {duration} {t('days_label', { fallback: 'Days' })}
+                    </div>
+                )}
+
                 {!isPast && (
                     <div className="absolute bottom-6 left-6 flex items-center gap-3">
                         <div className="bg-white/95 dark:bg-slate-900/95 p-3 rounded-2xl shadow-2xl border border-white/50 flex flex-col items-center justify-center min-w-[50px]">
@@ -312,23 +332,42 @@ function EventCard({ event, now, onShare, onImageClick }: { event: Event, now: n
                                 {event.eventDate.toDate().getDate()}
                             </span>
                         </div>
+                        {multi && (
+                            <>
+                                <span className="text-white font-black text-xs">–</span>
+                                <div className="bg-white/95 dark:bg-slate-900/95 p-3 rounded-2xl shadow-2xl border border-white/50 flex flex-col items-center justify-center min-w-[50px]">
+                                    <span className="text-[10px] font-black uppercase text-saffron leading-none mb-1" suppressHydrationWarning>
+                                        {endDate.toLocaleDateString(locale, { month: 'short' })}
+                                    </span>
+                                    <span className="text-xl font-black text-foreground leading-none">
+                                        {endDate.getDate()}
+                                    </span>
+                                </div>
+                            </>
+                        )}
                     </div>
                 )}
             </div>
 
             {/* Content Section */}
             <div className="p-8 md:p-10 flex-grow flex flex-col">
-                <div className="flex items-center gap-6 mb-6">
+                <div className="flex flex-wrap items-center gap-4 mb-6">
                     {isPast && (
                         <div className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest" suppressHydrationWarning>
                             <Calendar size={12} className="text-saffron" />
-                            {event.eventDate.toDate().toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {dateRangeStr}
                         </div>
                     )}
                     {event.location && (
                         <div className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest truncate">
                             <MapPin size={12} className="text-saffron shrink-0" />
                             {event.location}
+                        </div>
+                    )}
+                    {timeRangeStr && (
+                        <div className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest">
+                            <Clock size={12} className="text-saffron shrink-0" />
+                            {timeRangeStr}
                         </div>
                     )}
                 </div>

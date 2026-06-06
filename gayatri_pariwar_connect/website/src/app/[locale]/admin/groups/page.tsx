@@ -12,7 +12,8 @@ import {
     Shield,
     Calendar,
     LayoutGrid,
-    Loader2
+    Loader2,
+    Check
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import {
@@ -25,6 +26,7 @@ import {
     serverTimestamp
 } from "firebase/firestore";
 import AdminTable from "@/components/admin/AdminTable";
+import StatusBadge from "@/components/ui/StatusBadge";
 import { logAdminAction } from "@/lib/admin-logger";
 
 interface GroupModel {
@@ -125,7 +127,7 @@ export default function PublicGroupsPage() {
             header: "Group Info",
             accessor: (item: GroupModel) => (
                 <div className="flex items-center gap-3 min-w-[200px]">
-                    <div className={`w-10 h-10 rounded-xl border flex items-center justify-center overflow-hidden shrink-0 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-200'}`}>
+                    <div className={`w-10 h-10 rounded-xl border flex items-center justify-center overflow-hidden shrink-0 ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-slate-100 border-slate-200'}`}>
                         {item.photoUrl ? (
                             <img src={item.photoUrl} alt="" className="w-full h-full object-cover" />
                         ) : (
@@ -143,7 +145,7 @@ export default function PublicGroupsPage() {
             header: "Category",
             accessor: (item: GroupModel) => (
                 <div className="flex items-center gap-2">
-                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider capitalize ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider shadow-sm border ${isDark ? 'bg-zinc-800 text-zinc-400 border-zinc-700' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>
                         {item.type.replace(/_/g, ' ')}
                     </span>
                 </div>
@@ -161,17 +163,10 @@ export default function PublicGroupsPage() {
         {
             header: "Visibility Status",
             accessor: (item: GroupModel) => (
-                <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest w-fit ${item.status === 'approved'
-                    ? isDark ? "bg-emerald-500/10 text-emerald-500" : "bg-emerald-50 text-emerald-600"
-                    : item.status === 'pending'
-                        ? isDark ? "bg-orange-500/10 text-orange-500" : "bg-orange-50 text-orange-600"
-                        : isDark ? "bg-red-500/10 text-red-500" : "bg-red-50 text-red-600"
-                    }`}>
-                    {item.status === 'approved' ? <CheckCircle2 className="w-3 h-3" /> :
-                        item.status === 'pending' ? <Clock className="w-3 h-3" /> :
-                            <XCircle className="w-3 h-3" />}
-                    {item.status}
-                </div>
+                <StatusBadge
+                    variant={item.status}
+                    className="shadow-sm"
+                />
             )
         }
     ];
@@ -184,7 +179,7 @@ export default function PublicGroupsPage() {
                         <Shield className="w-8 h-8 text-orange-500" />
                         Public Group Moderation
                     </h1>
-                    <p className="text-slate-500 mt-2">Approve or reject community group discovery requests</p>
+                    <p className="text-slate-500 mt-2 dark:text-slate-400">Approve or reject community group discovery requests</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
@@ -196,18 +191,18 @@ export default function PublicGroupsPage() {
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className={`rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 w-64 transition-all placeholder:text-slate-400 shadow-sm ${isDark
-                                ? 'bg-slate-900 border border-slate-800 text-white'
+                                ? 'bg-zinc-900 border border-zinc-800 text-white'
                                 : 'bg-white border border-slate-200 text-black'
                                 }`}
                         />
                     </div>
 
-                    <div className={`flex items-center gap-2 rounded-xl px-3 py-1.5 shadow-sm ${isDark ? 'bg-slate-900 border border-slate-800' : 'bg-white border border-slate-200'}`}>
-                        <Filter className={`w-4 h-4 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+                    <div className={`flex items-center gap-2 rounded-xl px-3 py-1.5 shadow-sm ${isDark ? 'bg-zinc-900 border border-zinc-800' : 'bg-white border border-slate-200'}`}>
+                        <Filter className={`w-4 h-4 ${isDark ? 'text-zinc-500' : 'text-slate-400'}`} />
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
-                            className={`bg-transparent border-none text-xs focus:ring-0 outline-none cursor-pointer font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}
+                            className={`bg-transparent border-none text-xs focus:ring-0 outline-none cursor-pointer font-medium ${isDark ? 'text-zinc-300' : 'text-slate-600'}`}
                         >
                             <option value="pending">Pending</option>
                             <option value="approved">Approved</option>
@@ -218,23 +213,24 @@ export default function PublicGroupsPage() {
                 </div>
             </div>
 
-            <div className={`flex-1 min-h-0 rounded-2xl overflow-hidden relative shadow-sm ${isDark ? 'bg-slate-900 border border-slate-800' : 'bg-white border border-slate-200'}`}>
+            <div className={`flex-1 min-h-0 rounded-2xl overflow-hidden relative shadow-sm ${isDark ? 'bg-zinc-900 border border-zinc-800' : 'bg-white border border-slate-200 shadow-sm'}`}>
                 <AdminTable
                     columns={columns}
                     data={filteredGroups}
                     loading={loading}
+                    hideControls={true}
                     onRowClick={(item) => setSelectedGroup(item)}
                     emptyMessage="No public groups awaiting moderation."
                 />
 
                 {/* Group Details Modal */}
                 {selectedGroup && (
-                    <div className={`absolute inset-0 z-50 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200 ${isDark ? 'bg-slate-950/80' : 'bg-slate-900/20'}`}>
-                        <div className={`border rounded-3xl w-full max-w-2xl max-h-full flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 ${isDark ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
+                    <div className={`absolute inset-0 z-50 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200 ${isDark ? 'bg-zinc-950/80' : 'bg-slate-900/20'}`}>
+                        <div className={`border rounded-3xl w-full max-w-2xl max-h-full flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 ${isDark ? 'bg-zinc-950 border-zinc-800' : 'bg-white border-slate-200'}`}>
                             {/* Modal Header */}
-                            <div className={`p-6 border-b flex items-center justify-between shrink-0 ${isDark ? 'border-slate-800 bg-slate-900/50' : 'border-slate-100 bg-slate-50/50'}`}>
+                            <div className={`p-6 border-b flex items-center justify-between shrink-0 ${isDark ? 'border-zinc-800 bg-zinc-900/50' : 'border-slate-100 bg-slate-50/50'}`}>
                                 <div className="flex items-center gap-4">
-                                    <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center overflow-hidden shadow-sm ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+                                    <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center overflow-hidden shadow-sm ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-slate-200'}`}>
                                         {selectedGroup.photoUrl ? (
                                             <img src={selectedGroup.photoUrl} alt="" className="w-full h-full object-cover" />
                                         ) : (
@@ -248,7 +244,7 @@ export default function PublicGroupsPage() {
                                 </div>
                                 <button
                                     onClick={() => setSelectedGroup(null)}
-                                    className={`p-2 rounded-full transition-all ${isDark ? 'text-slate-500 hover:text-white hover:bg-slate-800' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
+                                    className={`p-2 rounded-full transition-all ${isDark ? 'text-zinc-500 hover:text-white hover:bg-zinc-800' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
                                 >
                                     <X className="w-6 h-6" />
                                 </button>
@@ -257,8 +253,8 @@ export default function PublicGroupsPage() {
                             {/* Modal Content */}
                             <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
                                 <div className="space-y-4">
-                                    <h4 className={`text-[10px] font-bold uppercase tracking-widest px-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>About this Group</h4>
-                                    <p className={`text-sm leading-relaxed p-4 rounded-2xl border ${isDark ? 'text-slate-300 bg-slate-900/50 border-white/5' : 'text-slate-600 bg-slate-50 border-slate-100'}`}>
+                                    <h4 className={`text-[10px] font-bold uppercase tracking-widest px-1 ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>About this Group</h4>
+                                    <p className={`text-sm leading-relaxed p-4 rounded-2xl border ${isDark ? 'text-zinc-300 bg-zinc-900/50 border-white/5' : 'text-slate-600 bg-slate-50 border-slate-100'}`}>
                                         {selectedGroup.description || "No description provided."}
                                     </p>
                                 </div>
@@ -268,21 +264,21 @@ export default function PublicGroupsPage() {
                                         <h4 className="text-[10px] font-bold text-orange-500 uppercase tracking-widest px-1">Reason for Discovery</h4>
                                         <div className={`p-4 rounded-2xl flex gap-3 italic ${isDark ? 'bg-orange-500/5 border border-orange-500/10' : 'bg-orange-50 border border-orange-100'}`}>
                                             <LayoutGrid className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
-                                            <p className={`text-sm leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{selectedGroup.creationReason}</p>
+                                            <p className={`text-sm leading-relaxed ${isDark ? 'text-zinc-400' : 'text-slate-600'}`}>{selectedGroup.creationReason}</p>
                                         </div>
                                     </div>
                                 )}
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1">
-                                        <label className={`text-[10px] font-bold uppercase tracking-widest px-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Created By</label>
-                                        <div className={`p-3 rounded-xl border font-mono text-xs truncate ${isDark ? 'bg-slate-900/50 border-white/5 text-slate-400' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
+                                        <label className={`text-[10px] font-bold uppercase tracking-widest px-1 ${isDark ? 'text-zinc-500' : 'text-slate-400'}`}>Created By</label>
+                                        <div className={`p-3 rounded-xl border font-mono text-xs truncate ${isDark ? 'bg-zinc-900/50 border-white/5 text-zinc-400' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
                                             {selectedGroup.createdBy}
                                         </div>
                                     </div>
                                     <div className="space-y-1">
                                         <label className={`text-[10px] font-bold uppercase tracking-widest px-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Created On</label>
-                                        <div className={`p-3 rounded-xl border text-xs ${isDark ? 'bg-slate-900/50 border-white/5 text-slate-400' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
+                                        <div className={`p-3 rounded-xl border text-xs ${isDark ? 'bg-zinc-900/50 border-white/5 text-zinc-400' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
                                             {selectedGroup.createdAt?.toDate ? selectedGroup.createdAt.toDate().toLocaleString() : 'Recent'}
                                         </div>
                                     </div>
@@ -290,7 +286,7 @@ export default function PublicGroupsPage() {
                             </div>
 
                             {/* Modal Footer - Actions */}
-                            <div className={`p-8 border-t shrink-0 ${isDark ? 'border-slate-800 bg-slate-900/50' : 'border-slate-100 bg-slate-50/50'}`}>
+                            <div className={`p-8 border-t shrink-0 ${isDark ? 'border-zinc-800 bg-zinc-900/50' : 'border-slate-100 bg-slate-50/50'}`}>
                                 {selectedGroup.status === 'pending' ? (
                                     <div className="flex gap-4">
                                         <button

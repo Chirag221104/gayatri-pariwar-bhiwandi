@@ -41,18 +41,18 @@ export default function SectionHeader({
             <div className="flex items-start gap-4">
                 {Icon && (
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border shadow-lg ${isDark
-                            ? 'bg-gradient-to-br from-orange-500/20 to-orange-600/10 border-orange-500/20 text-orange-500 shadow-orange-500/5'
-                            : 'bg-white border-orange-100 text-orange-600 shadow-orange-500/10'
+                        ? 'bg-zinc-800 border-zinc-700 text-orange-500'
+                        : 'bg-white border-orange-100 text-orange-600 shadow-orange-500/10'
                         }`}>
                         <Icon className="w-6 h-6" />
                     </div>
                 )}
                 <div>
-                    <h1 className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    <h1 className={`text-2xl font-extrabold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
                         {title}
                     </h1>
                     {subtitle && (
-                        <p className={`text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        <p className={`text-sm mt-1 font-medium ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
                             {subtitle}
                         </p>
                     )}

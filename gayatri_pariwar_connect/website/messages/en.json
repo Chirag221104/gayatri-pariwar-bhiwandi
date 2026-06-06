@@ -7,12 +7,129 @@
         "home": "Home",
         "events": "Events",
         "spiritual": "Spiritual",
+        "buy_books": "Buy Books",
         "news": "News",
-        "about": "About",
+        "about": "About Us",
         "contact": "Contact",
+        "my_orders": "My Orders",
         "download_app": "Download App",
+        "login": "Login",
+        "logout": "Logout",
         "settings_label": "Settings",
         "theme_lang_label": "Theme & Language"
+    },
+    "books": {
+        "header": {
+            "badge": "Divine Literature",
+            "title": "Gayatri Granthalaya",
+            "desc": "Explore our collection of divine literature. All books are available for purchase and home delivery."
+        },
+        "search_placeholder": "Search title or author...",
+        "filter_by_category": "Filter by Category",
+        "no_results": "No books found matching your criteria.",
+        "view_button": "View"
+    },
+    "cart": {
+        "header": {
+            "badge": "Your Selection",
+            "title": "Shopping Cart",
+            "desc": "Review your selected items and proceed to checkout for a spiritual journey."
+        },
+        "empty_title": "Your cart is empty",
+        "empty_desc": "Looking for something divine? Browse our collection of books and start your spiritual journey today.",
+        "browse_books": "Browse Books",
+        "summary_title": "Summary",
+        "total_items": "Total Items",
+        "unit_price": "Unit Price",
+        "item_total": "Item Total",
+        "subtotal": "Subtotal",
+        "delivery": "Delivery",
+        "free": "FREE",
+        "total": "Total",
+        "checkout_btn": "Proceed to Checkout",
+        "login_checkout_btn": "Login to Checkout",
+        "secure_note": "Secure payment via Razorpay. Home delivery available across Bhiwandi and surrounding areas."
+    },
+    "checkout": {
+        "header": {
+            "badge": "Final Steps",
+            "title": "Secure Checkout",
+            "desc": "Provide your delivery details and choose a payment method to complete your order."
+        },
+        "sections": {
+            "address": "Delivery Address",
+            "payment": "Payment Method"
+        },
+        "address": {
+            "add_new": "Add New",
+            "save_select": "Save & Select",
+            "adding": "Adding...",
+            "cancel": "Cancel",
+            "no_addresses": "No addresses saved yet.",
+            "form": {
+                "flat": "Flat / House No. / Office No.",
+                "society": "Society / Building Name",
+                "area": "Area / Locality",
+                "landmark": "Landmark (Optional)",
+                "pincode": "Pincode"
+            }
+        },
+        "payment": {
+            "online_title": "Online Payment",
+            "online_desc": "UPI, Cards, Netbanking via Razorpay",
+            "manual_title": "Manual Payment",
+            "manual_desc": "Pay via WhatsApp / COD",
+            "manual_confirm": "Your order will be placed as 'Pay via WhatsApp'. Our team will contact you for payment. Proceed?"
+        },
+        "summary": {
+            "title": "Order Summary",
+            "qty": "Qty",
+            "subtotal": "Subtotal",
+            "delivery": "Delivery",
+            "grand_total": "Grand Total",
+            "place_order": "Place Order",
+            "processing": "Processing...",
+            "fast_delivery": "Fast Delivery",
+            "safe_shopping": "Safe Shopping"
+        },
+        "toasts": {
+            "addr_success": "Address added successfully",
+            "addr_fail": "Failed to add address",
+            "select_addr": "Please select a delivery address",
+            "razorpay_fail": "Razorpay SDK failed to load. Are you online?",
+            "pay_cancel": "Payment cancelled by user",
+            "order_success": "Order placed successfully!",
+            "order_partial_fail": "Payment successful but order creation failed. Please contact support.",
+            "manual_success": "Manual order placed! Check your orders.",
+            "manual_fail": "Failed to place order. Please try again."
+        }
+    },
+    "orders": {
+        "header": {
+            "badge": "Your Journey",
+            "title": "Order History",
+            "desc": "Track your divine collections and spiritual orders from Gayatri Granthalaya."
+        },
+        "empty": {
+            "title": "No orders yet",
+            "desc": "Your spiritual journey is just beginning. Browse our collection to find your first inspiration.",
+            "cta": "Explore Books"
+        },
+        "order": {
+            "id_label": "Order ID",
+            "date_label": "Ordered On",
+            "city_label": "Delivery City",
+            "amount_label": "Total Amount",
+            "paid": "Paid Online",
+            "pay_pending": "Payment Pending",
+            "items_title": "Order Items"
+        },
+        "status": {
+            "placed": "Placed",
+            "packed": "Packed",
+            "shipped": "Shipped",
+            "delivered": "Delivered"
+        }
     },
     "home": {
         "hero": {
@@ -137,7 +254,11 @@
         "card": {
             "cta_upcoming": "Register for Event",
             "cta_past": "View Highlights",
-            "default_type": "General"
+            "default_type": "General",
+            "days_label": "Days",
+            "duration": "Duration",
+            "starts": "Starts",
+            "ends": "Ends"
         },
         "detail": {
             "not_found_title": "Event Not Found",
