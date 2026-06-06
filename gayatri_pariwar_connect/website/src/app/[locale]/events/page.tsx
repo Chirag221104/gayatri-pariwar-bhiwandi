@@ -22,6 +22,7 @@ interface Event {
     location: string;
     imageUrl?: string;
     photos?: string[];
+    isMultiDay?: boolean;
     type: string;
 }
 

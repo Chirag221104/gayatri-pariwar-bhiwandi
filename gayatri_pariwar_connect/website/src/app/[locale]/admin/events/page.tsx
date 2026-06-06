@@ -21,6 +21,7 @@ interface GlobalEvent {
     startTime?: string | null;
     endTime?: string | null;
     hasTime?: boolean;
+    isMultiDay?: boolean;
     createdBy: string;
     createdAt: any;
 }
