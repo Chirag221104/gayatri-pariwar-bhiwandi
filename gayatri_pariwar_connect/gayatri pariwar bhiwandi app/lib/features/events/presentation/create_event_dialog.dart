@@ -32,6 +32,9 @@ class _CreateEventDialogState extends ConsumerState<CreateEventDialog> {
   String? _selectedFolderId;
   String? _selectedGroupId;
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
+  bool _isMultiDay = false;
+  bool _hasTime = true;
+  DateTime? _endDate;
   bool _isLoading = false;
 
   // Responsible Contact State
@@ -69,22 +72,66 @@ class _CreateEventDialogState extends ConsumerState<CreateEventDialog> {
     if (!mounted) return;
 
     if (picked != null) {
-      final time = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.fromDateTime(_selectedDate),
-      );
+      if (_hasTime) {
+        final time = await showTimePicker(
+          context: context,
+          initialTime: TimeOfDay.fromDateTime(_selectedDate),
+        );
 
-      if (!mounted) return;
+        if (!mounted) return;
 
-      if (time != null) {
+        if (time != null) {
+          setState(() {
+            _selectedDate = DateTime(
+              picked.year,
+              picked.month,
+              picked.day,
+              time.hour,
+              time.minute,
+            );
+          });
+        }
+      } else {
         setState(() {
-          _selectedDate = DateTime(
-            picked.year,
-            picked.month,
-            picked.day,
-            time.hour,
-            time.minute,
-          );
+          _selectedDate = DateTime(picked.year, picked.month, picked.day, _selectedDate.hour, _selectedDate.minute);
+        });
+      }
+    }
+  }
+
+  Future<void> _selectEndDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _endDate ?? _selectedDate,
+      firstDate: _selectedDate,
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
+    );
+
+    if (!mounted) return;
+
+    if (picked != null) {
+      if (_hasTime) {
+        final time = await showTimePicker(
+          context: context,
+          initialTime: _endDate != null ? TimeOfDay.fromDateTime(_endDate!) : const TimeOfDay(hour: 23, minute: 59),
+        );
+
+        if (!mounted) return;
+
+        if (time != null) {
+          setState(() {
+            _endDate = DateTime(
+              picked.year,
+              picked.month,
+              picked.day,
+              time.hour,
+              time.minute,
+            );
+          });
+        }
+      } else {
+        setState(() {
+          _endDate = DateTime(picked.year, picked.month, picked.day, 23, 59, 59);
         });
       }
     }
@@ -179,6 +226,11 @@ class _CreateEventDialogState extends ConsumerState<CreateEventDialog> {
         description: _descriptionController.text.trim(),
         location: _locationController.text.trim(),
         eventDate: _selectedDate,
+        endDate: _isMultiDay ? (_endDate ?? _selectedDate) : _selectedDate,
+        isMultiDay: _isMultiDay,
+        hasTime: _hasTime,
+        startTime: _hasTime ? DateFormat('HH:mm').format(_selectedDate) : null,
+        endTime: (_hasTime && _isMultiDay && _endDate != null) ? DateFormat('HH:mm').format(_endDate!) : null,
         createdBy: user.uid,
         createdAt: DateTime.now(),
         photos: photoUrls,
@@ -383,55 +435,141 @@ class _CreateEventDialogState extends ConsumerState<CreateEventDialog> {
               ),
               const SizedBox(height: 14),
               
-              // Date picker
-              InkWell(
-                onTap: _selectDate,
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.primarySaffron.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.primarySaffron.withValues(alpha: 0.3)),
+              // Date and Time toggles
+              Row(
+                children: [
+                  Expanded(
+                    child: CheckboxListTile(
+                      title: const Text("Multi-day", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      value: _isMultiDay,
+                      onChanged: (val) => setState(() => _isMultiDay = val ?? false),
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
+                  Expanded(
+                    child: CheckboxListTile(
+                      title: const Text("Include Time", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      value: _hasTime,
+                      onChanged: (val) => setState(() => _hasTime = val ?? true),
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                  ),
+                ],
+              ),
+              
+              // Date picker
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: _selectDate,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: AppColors.primarySaffron.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(10),
+                          color: AppColors.primarySaffron.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.primarySaffron.withValues(alpha: 0.3)),
                         ),
-                        child: const Icon(Icons.calendar_today, color: AppColors.primarySaffron, size: 22),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
                           children: [
-                            Text(
-                              l10n.eventDateTimeLabel,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: AppColors.primarySaffron.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(10),
                               ),
+                              child: const Icon(Icons.calendar_today, color: AppColors.primarySaffron, size: 22),
                             ),
-                            const SizedBox(height: 3),
-                            Text(
-                              DateFormat('EEEE, MMM dd, yyyy • h:mm a').format(_selectedDate),
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 13,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _isMultiDay ? "Start Date" : l10n.eventDateTimeLabel,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    _hasTime ? DateFormat('MMM dd, yyyy • h:mm a').format(_selectedDate) : DateFormat('MMM dd, yyyy').format(_selectedDate),
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                      Icon(Icons.edit, color: AppColors.primarySaffron, size: 20),
-                    ],
+                    ),
                   ),
-                ),
+                  
+                  if (_isMultiDay) ...[
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: InkWell(
+                        onTap: _selectEndDate,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppColors.primarySaffron.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.primarySaffron.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primarySaffron.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.event, color: AppColors.primarySaffron, size: 22),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      "End Date",
+                                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      _endDate == null 
+                                          ? "Select Date" 
+                                          : (_hasTime ? DateFormat('MMM dd • h:mm a').format(_endDate!) : DateFormat('MMM dd, yyyy').format(_endDate!)),
+                                      style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
+              
+              if (_isMultiDay && _endDate != null && _endDate!.isAfter(_selectedDate)) ...[
+                const SizedBox(height: 8),
+                Text(
+                  "Event spans ${_endDate!.difference(_selectedDate).inDays.abs() + 1} day(s)",
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange.shade800),
+                ),
+              ],
               
               const SizedBox(height: 20),
               

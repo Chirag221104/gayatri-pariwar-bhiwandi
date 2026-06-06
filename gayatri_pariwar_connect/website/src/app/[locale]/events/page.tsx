@@ -86,11 +86,20 @@ export default function EventsPage() {
         fetchEvents();
     }, []);
 
-    const upcomingEvents = events.filter(e => e.eventDate.toMillis() >= now);
-    const pastEvents = events.filter(e => e.eventDate.toMillis() < now);
+    const ongoingEvents = events.filter(e => {
+        const effectiveEndDate = e.isMultiDay && e.endDate ? e.endDate : e.eventDate;
+        return e.eventDate.toMillis() <= now && effectiveEndDate.toMillis() >= now;
+    });
+    
+    const upcomingEvents = events.filter(e => e.eventDate.toMillis() > now);
+    
+    const pastEvents = events.filter(e => {
+        const effectiveEndDate = e.isMultiDay && e.endDate ? e.endDate : e.eventDate;
+        return effectiveEndDate.toMillis() < now;
+    });
 
-    // Combine for lightbox navigation (Upcoming then Past)
-    const allDisplayEvents = [...upcomingEvents, ...pastEvents];
+    // Combine for lightbox navigation
+    const allDisplayEvents = [...ongoingEvents, ...upcomingEvents, ...pastEvents];
 
     const openLightbox = (eventId: string) => {
         const index = allDisplayEvents.findIndex(e => e.id === eventId);
@@ -161,6 +170,44 @@ export default function EventsPage() {
                     </div>
                 ) : (
                     <div className="space-y-32">
+                        {/* Ongoing Events */}
+                        {ongoingEvents.length > 0 && (
+                            <motion.section
+                                variants={containerVariants}
+                                initial="hidden"
+                                whileInView="visible"
+                                viewport={{ once: true }}
+                                className="mb-24"
+                            >
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-2 h-8 bg-green-500 rounded-full animate-pulse"></div>
+                                            <h2 className="text-3xl md:text-4xl font-black text-foreground font-display uppercase tracking-wider">
+                                                Ongoing Events
+                                            </h2>
+                                        </div>
+                                        <p className="text-muted text-sm font-medium opacity-70 ml-5">These events are currently active</p>
+                                    </div>
+                                    <div className="px-6 py-2 bg-green-500/10 text-green-700 dark:text-green-400 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-green-500/20 shadow-lg shadow-green-500/10">
+                                        {ongoingEvents.length} Active Now
+                                    </div>
+                                </div>
+
+                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
+                                    {ongoingEvents.map((event) => (
+                                        <EventCard
+                                            key={event.id}
+                                            event={event}
+                                            now={now}
+                                            onShare={() => handleShare(event)}
+                                            onImageClick={() => openLightbox(event.id)}
+                                        />
+                                    ))}
+                                </div>
+                            </motion.section>
+                        )}
+
                         {/* Upcoming Events */}
                         <motion.section
                             variants={containerVariants}

@@ -126,11 +126,19 @@ export default function EventsManagementPage() {
                 const date = event.eventDate instanceof Timestamp
                     ? event.eventDate.toDate()
                     : new Date(event.eventDate);
-                const isPast = date < new Date();
+                const endDate = event.endDate 
+                    ? (event.endDate instanceof Timestamp ? event.endDate.toDate() : new Date(event.endDate)) 
+                    : date;
+                
+                const now = new Date();
+                const isPast = endDate < now;
+                const isUpcoming = date > now;
+                const isOngoing = !isPast && !isUpcoming;
+
                 return (
                     <StatusBadge
-                        variant={isPast ? "cancelled" : "active"}
-                        label={isPast ? "Past" : "Upcoming"}
+                        variant={isPast ? "cancelled" : (isOngoing ? "success" : "active")}
+                        label={isPast ? "Past" : (isOngoing ? "Ongoing" : "Upcoming")}
                     />
                 );
             }
