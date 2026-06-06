@@ -481,15 +481,15 @@ exports.onServiceRequestUpdated = onDocumentWritten({
     return { success: true };
 });
 
-// 9. Midnight Maintenance Task (Auto-closures and State Resets)
-exports.midnightMaintenance = onSchedule({
+// 9. Midnight Tasks (Auto-closures, State Resets, and Notifications)
+exports.midnightTasks = onSchedule({
     schedule: "every day 00:00",
     region: region,
     timeZone: "Asia/Kolkata"
 }, async (event) => {
     const db = admin.firestore();
     const now = new Date();
-    console.log(`[midnightMaintenance] Starting midnight tasks for ${now.toISOString()}`);
+    console.log(`[midnightTasks] Starting midnight tasks for ${now.toISOString()}`);
     
     // --- TASK A: Auto-complete Past Service Requests ---
     try {
@@ -511,10 +511,10 @@ exports.midnightMaintenance = onSchedule({
 
         if (count > 0) {
             await batch.commit();
-            console.log(`[midnightMaintenance] Auto-completed ${count} past requests`);
+            console.log(`[midnightTasks] Auto-completed ${count} past requests`);
         }
     } catch (error) {
-        console.error(`[midnightMaintenance] Error in Auto-complete Past Service Requests:`, error);
+        console.error(`[midnightTasks] Error in Auto-complete Past Service Requests:`, error);
     }
 
     // --- TASK B: Auto-Resume Postponed Sevas ---
@@ -556,26 +556,13 @@ exports.midnightMaintenance = onSchedule({
             });
 
             await batch.commit();
-            console.log(`[midnightMaintenance] Auto-resumed ${count} postponed sevas`);
+            console.log(`[midnightTasks] Auto-resumed ${count} postponed sevas`);
         }
     } catch (error) {
-        console.error(`[midnightMaintenance] Error in Auto-Resume Postponed Sevas:`, error);
+        console.error(`[midnightTasks] Error in Auto-Resume Postponed Sevas:`, error);
     }
 
-    console.log(`[midnightMaintenance] Completed all tasks.`);
-    return { success: true };
-});
-
-// 10. Morning Notifications (Birthdays and Anniversaries)
-exports.morningNotifications = onSchedule({
-    schedule: "every day 09:00",
-    region: region,
-    timeZone: "Asia/Kolkata"
-}, async (event) => {
-    const db = admin.firestore();
-    const now = new Date();
-    console.log(`[morningNotifications] Starting morning notifications for ${now.toISOString()}`);
-
+    // --- TASK C: Send Daily Celebrations ---
     try {
         const usersSnap = await db.collection("users").get();
         let birthdayCount = 0;
@@ -631,13 +618,13 @@ exports.morningNotifications = onSchedule({
             };
 
             const response = await admin.messaging().sendToTopic("all_users", payload);
-            console.log(`[morningNotifications] Celebrations notification sent: ${response.messageId}`);
+            console.log(`[midnightTasks] Celebrations notification sent: ${response.messageId}`);
         }
     } catch (error) {
-        console.error(`[morningNotifications] Error in Send Daily Celebrations:`, error);
+        console.error(`[midnightTasks] Error in Send Daily Celebrations:`, error);
     }
 
-    console.log(`[morningNotifications] Completed all tasks.`);
+    console.log(`[midnightTasks] Completed all tasks.`);
     return { success: true };
 });
 
