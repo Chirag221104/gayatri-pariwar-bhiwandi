@@ -26,6 +26,7 @@ interface NewsItem {
     shortDescription: string;
     fullDescription: string;
     imageUrl: string;
+    photos?: string[];
     category: string;
     isImportant: boolean;
     status: string;
@@ -66,8 +67,13 @@ export default function NewsForm({ initialData, onSave, onCancel, isSaving }: Ne
     const [title, setTitle] = useState(initialData?.title || "");
     const [shortDescription, setShortDescription] = useState(initialData?.shortDescription || "");
     const [fullDescription, setFullDescription] = useState(initialData?.fullDescription || "");
-    const [imageUrl, setImageUrl] = useState(initialData?.imageUrl || "");
+    const [photos, setPhotos] = useState<string[]>(initialData?.photos || (initialData?.imageUrl ? [initialData.imageUrl] : []));
     const [category, setCategory] = useState(initialData?.category || CATEGORIES[0]);
+
+    const removePhoto = (index: number) => {
+        setPhotos(photos.filter((_, i) => i !== index));
+        setIsDirty(true);
+    };
     const [isImportant, setIsImportant] = useState(initialData?.isImportant || false);
     const [status, setStatus] = useState(initialData?.status || "published");
 
@@ -147,7 +153,8 @@ export default function NewsForm({ initialData, onSave, onCancel, isSaving }: Ne
             title,
             shortDescription,
             fullDescription,
-            imageUrl,
+            imageUrl: photos.length > 0 ? photos[0] : "",
+            photos,
             category,
             isImportant,
             status,
@@ -513,38 +520,38 @@ export default function NewsForm({ initialData, onSave, onCancel, isSaving }: Ne
                         </h2>
 
                         <div className="space-y-4">
-                            {imageUrl ? (
-                                <div className={`relative aspect-video rounded-xl overflow-hidden border group ${isDark ? 'border-slate-800' : 'border-slate-200'
-                                    }`}>
-                                    <img src={imageUrl} alt="Featured" className="w-full h-full object-cover" />
-                                    <button
-                                        type="button"
-                                        onClick={() => { setImageUrl(""); setIsDirty(true); }}
-                                        className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                                    >
-                                        <Trash2 className="w-6 h-6 text-white" />
-                                    </button>
-                                </div>
-                            ) : (
-                                <ImageUpload
-                                    onUpload={(url) => {
-                                        setImageUrl(url);
-                                        setIsDirty(true);
-                                    }}
-                                    folder="news"
-                                    isDark={isDark}
-                                    description="Upload Featured Image"
-                                />
-                            )}
+                            <ImageUpload
+                                onUploadMultiple={(urls) => {
+                                    setPhotos([...photos, ...urls]);
+                                    setIsDirty(true);
+                                }}
+                                multiple={true}
+                                folder="news"
+                                isDark={isDark}
+                                description="Add News Photos (Drag & Drop or Click)"
+                                className="h-32"
+                            />
 
-                            {imageUrl && (
-                                <input
-                                    type="url"
-                                    value={imageUrl}
-                                    onChange={(e) => { setImageUrl(e.target.value); setIsDirty(true); }}
-                                    className={inputClasses}
-                                    placeholder="Or paste image URL..."
-                                />
+                            {photos.length > 0 && (
+                                <div className="grid grid-cols-3 gap-3 animate-in fade-in duration-500">
+                                    {photos.map((url, idx) => (
+                                        <div key={idx} className={`relative aspect-square rounded-xl overflow-hidden border group ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+                                            <img src={url} alt={`Preview ${idx}`} className="w-full h-full object-cover" />
+                                            {idx === 0 && (
+                                                <div className="absolute top-2 left-2 bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">
+                                                    Cover
+                                                </div>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={() => removePhoto(idx)}
+                                                className="absolute top-2 right-2 p-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <Trash2 className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
                         </div>
                     </div>
