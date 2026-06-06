@@ -17,7 +17,9 @@ import {
     ChevronDown,
     Clock,
     CalendarRange,
-    AlertCircle
+    AlertCircle,
+    ChevronLeft,
+    ChevronRight
 } from "lucide-react";
 import ImageUpload from "@/components/admin/ImageUpload";
 import { Timestamp } from "firebase/firestore";
@@ -263,6 +265,17 @@ export default function EventForm({ initialData, onSave, onCancel, isSaving }: E
 
     const removePhoto = (index: number) => {
         setPhotos(photos.filter((_, i) => i !== index));
+        setIsDirty(true);
+    };
+
+    const movePhoto = (idx: number, direction: 'left' | 'right') => {
+        const newPhotos = [...photos];
+        if (direction === 'left' && idx > 0) {
+            [newPhotos[idx - 1], newPhotos[idx]] = [newPhotos[idx], newPhotos[idx - 1]];
+        } else if (direction === 'right' && idx < newPhotos.length - 1) {
+            [newPhotos[idx + 1], newPhotos[idx]] = [newPhotos[idx], newPhotos[idx + 1]];
+        }
+        setPhotos(newPhotos);
         setIsDirty(true);
     };
 
@@ -769,13 +782,41 @@ export default function EventForm({ initialData, onSave, onCancel, isSaving }: E
                                         <div key={idx} className={`relative aspect-square rounded-xl overflow-hidden border group ${isDark ? 'border-slate-800' : 'border-slate-200'
                                             }`}>
                                             <img src={url} alt={`Preview ${idx}`} className="w-full h-full object-cover" />
-                                            <button
-                                                type="button"
-                                                onClick={() => removePhoto(idx)}
-                                                className="absolute top-2 right-2 p-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                                            >
-                                                <Trash2 className="w-3 h-3" />
-                                            </button>
+                                            {/* Action Buttons Container */}
+                                            <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removePhoto(idx)}
+                                                    className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg text-white shadow-sm"
+                                                    title="Remove Photo"
+                                                >
+                                                    <Trash2 className="w-3 h-3" />
+                                                </button>
+                                            </div>
+
+                                            {/* Reorder Buttons */}
+                                            {photos.length > 1 && (
+                                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-md rounded-lg p-1 shadow-md">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => movePhoto(idx, 'left')}
+                                                        disabled={idx === 0}
+                                                        className="p-1 hover:bg-white/20 rounded-md text-white disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                                                        title="Move Left"
+                                                    >
+                                                        <ChevronLeft className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => movePhoto(idx, 'right')}
+                                                        disabled={idx === photos.length - 1}
+                                                        className="p-1 hover:bg-white/20 rounded-md text-white disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                                                        title="Move Right"
+                                                    >
+                                                        <ChevronRight className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
