@@ -20,6 +20,7 @@ interface AdminTableProps<T> {
     searchValue?: string;
     onSearchChange?: (value: string) => void;
     hideControls?: boolean;
+    extraControls?: React.ReactNode;
 }
 
 export default function AdminTable<T extends { id: string }>({
@@ -33,6 +34,7 @@ export default function AdminTable<T extends { id: string }>({
     searchValue,
     onSearchChange,
     hideControls = false,
+    extraControls,
     selectable = false,
     selectedIds,
     onSelectionChange
@@ -80,6 +82,11 @@ export default function AdminTable<T extends { id: string }>({
                                 }`}
                         />
                     </div>
+                    {extraControls && (
+                        <div className="w-full sm:w-auto overflow-x-auto scrollbar-hide pb-1 sm:pb-0 flex items-center">
+                            {extraControls}
+                        </div>
+                    )}
                 </div>
             )}
 

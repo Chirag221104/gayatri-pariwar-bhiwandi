@@ -30,6 +30,7 @@ export default function EventsManagementPage() {
     const [events, setEvents] = useState<GlobalEvent[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const [filterStatus, setFilterStatus] = useState<"all" | "upcoming" | "ongoing" | "past">("all");
     const [isDark, setIsDark] = useState(false);
     const params = useParams();
     const locale = (params?.locale as string) || "en";
@@ -69,10 +70,31 @@ export default function EventsManagementPage() {
         return () => unsubscribe();
     }, []);
 
-    const filteredEvents = events.filter(event =>
-        event.title.toLowerCase().includes(search.toLowerCase()) ||
-        event.location.toLowerCase().includes(search.toLowerCase())
-    );
+    const filteredEvents = events.filter(event => {
+        const matchesSearch = event.title.toLowerCase().includes(search.toLowerCase()) ||
+            event.location.toLowerCase().includes(search.toLowerCase());
+            
+        if (!matchesSearch) return false;
+        if (filterStatus === "all") return true;
+
+        const date = event.eventDate instanceof Timestamp
+            ? event.eventDate.toDate()
+            : new Date(event.eventDate);
+        const endDate = event.endDate 
+            ? (event.endDate instanceof Timestamp ? event.endDate.toDate() : new Date(event.endDate)) 
+            : date;
+        
+        const now = new Date();
+        const isPast = endDate < now;
+        const isUpcoming = date > now;
+        const isOngoing = !isPast && !isUpcoming;
+
+        if (filterStatus === "upcoming") return isUpcoming;
+        if (filterStatus === "ongoing") return isOngoing;
+        if (filterStatus === "past") return isPast;
+        
+        return true;
+    });
 
     const columns = [
         {
@@ -175,6 +197,30 @@ export default function EventsManagementPage() {
                     onRowClick={(event) => {
                         window.location.href = `/${locale}/admin/events/${event.id}`;
                     }}
+                    extraControls={
+                        <div className={`flex items-center p-1 rounded-lg border ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-slate-200'}`}>
+                            {[
+                                { id: 'all', label: 'All' },
+                                { id: 'upcoming', label: 'Upcoming' },
+                                { id: 'ongoing', label: 'Ongoing' },
+                                { id: 'past', label: 'Past' }
+                            ].map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setFilterStatus(tab.id as any)}
+                                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                                        filterStatus === tab.id
+                                            ? 'bg-orange-500 text-white shadow-sm'
+                                            : isDark 
+                                                ? 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700' 
+                                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                                    }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+                    }
                 />
             </div>
         </div>

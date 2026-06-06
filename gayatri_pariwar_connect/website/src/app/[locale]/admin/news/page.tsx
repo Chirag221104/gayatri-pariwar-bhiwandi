@@ -26,6 +26,7 @@ export default function NewsManagementPage() {
     const [news, setNews] = useState<NewsItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const [filterStatus, setFilterStatus] = useState<"all" | "published" | "draft" | "scheduled" | "archived">("all");
     const [isDark, setIsDark] = useState(false);
     const params = useParams();
     const locale = (params?.locale as string) || "en";
@@ -64,10 +65,15 @@ export default function NewsManagementPage() {
         return () => unsubscribe();
     }, []);
 
-    const filteredNews = news.filter(item =>
-        item.title.toLowerCase().includes(search.toLowerCase()) ||
-        item.category.toLowerCase().includes(search.toLowerCase())
-    );
+    const filteredNews = news.filter(item => {
+        const matchesSearch = item.title.toLowerCase().includes(search.toLowerCase()) ||
+            item.category.toLowerCase().includes(search.toLowerCase());
+            
+        if (!matchesSearch) return false;
+        if (filterStatus === "all") return true;
+        
+        return item.status?.toLowerCase() === filterStatus;
+    });
 
     const getStatusBadge = (status: string) => {
         let variant: any = "info";
@@ -160,6 +166,31 @@ export default function NewsManagementPage() {
                     onRowClick={(item) => {
                         window.location.href = `/${locale}/admin/news/${item.id}`;
                     }}
+                    extraControls={
+                        <div className={`flex items-center p-1 rounded-lg border ${isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-slate-200'}`}>
+                            {[
+                                { id: 'all', label: 'All' },
+                                { id: 'published', label: 'Published' },
+                                { id: 'scheduled', label: 'Scheduled' },
+                                { id: 'draft', label: 'Drafts' },
+                                { id: 'archived', label: 'Archived' }
+                            ].map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setFilterStatus(tab.id as any)}
+                                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                                        filterStatus === tab.id
+                                            ? 'bg-orange-500 text-white shadow-sm'
+                                            : isDark 
+                                                ? 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700' 
+                                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                                    }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+                    }
                 />
             </div>
         </div>
