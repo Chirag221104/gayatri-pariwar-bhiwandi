@@ -137,7 +137,7 @@ export default function EventsManagementPage() {
 
                 return (
                     <StatusBadge
-                        variant={isPast ? "cancelled" : (isOngoing ? "success" : "active")}
+                        variant={isPast ? "past" : (isOngoing ? "active" : "pending")}
                         label={isPast ? "Past" : (isOngoing ? "Ongoing" : "Upcoming")}
                     />
                 );
