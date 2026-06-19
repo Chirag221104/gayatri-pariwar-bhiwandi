@@ -131,6 +131,27 @@ class _EventDetailContentState extends ConsumerState<_EventDetailContent> {
     super.dispose();
   }
 
+  void _resetYoutubeController() {
+    if (widget.event.youtubeUrl != null && widget.event.youtubeUrl!.isNotEmpty) {
+      final videoId = YoutubePlayerController.convertUrlToId(widget.event.youtubeUrl!);
+      if (videoId != null) {
+        final oldController = _youtubeController;
+        setState(() {
+          _youtubeController = YoutubePlayerController.fromVideoId(
+            videoId: videoId,
+            autoPlay: false,
+            params: const YoutubePlayerParams(
+              showControls: true,
+              showFullscreenButton: true,
+              mute: false,
+            ),
+          );
+        });
+        oldController?.close();
+      }
+    }
+  }
+
   Widget _buildBody(BuildContext context, WidgetRef ref, Widget? playerWidget) {
     final event = widget.event;
     final user = ref.watch(currentUserDataProvider).valueOrNull;
@@ -185,6 +206,7 @@ class _EventDetailContentState extends ConsumerState<_EventDetailContent> {
               event: event,
               youtubePlayerWidget: playerWidget,
               youtubeController: _youtubeController,
+              onResetYoutube: _resetYoutubeController,
             ),
 
             // Status Badge (compact, below photo gallery or media)
@@ -562,11 +584,13 @@ class _MediaTabsSection extends StatefulWidget {
   final GlobalEvent event;
   final Widget? youtubePlayerWidget;
   final YoutubePlayerController? youtubeController;
+  final VoidCallback? onResetYoutube;
   
   const _MediaTabsSection({
     required this.event, 
     this.youtubePlayerWidget, 
     this.youtubeController,
+    this.onResetYoutube,
   });
   
   @override
@@ -639,13 +663,23 @@ class _MediaTabsSectionState extends State<_MediaTabsSection> with SingleTickerP
     _tabController = TabController(length: _tabs.length > 0 ? _tabs.length : 1, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
-        // Reset YouTube to 0s and pause
-        if (widget.event.youtubeUrl != null && widget.youtubeController != null) {
-          widget.youtubeController!.pauseVideo();
-          widget.youtubeController!.seekTo(seconds: 0.0, allowSeekAhead: false);
+        final activeTab = _tabs[_tabController.index];
+        
+        if (activeTab == 'YouTube') {
+          // Re-initialize YouTube completely for a fresh session
+          widget.onResetYoutube?.call();
+        } else {
+          // Pause YouTube so audio stops while it's hidden
+          widget.youtubeController?.pauseVideo();
         }
-        // Reload Instagram webview to reset it completely and stop audio
-        _webViewController?.reload();
+        
+        if (activeTab == 'Instagram') {
+          // Reload Instagram webview to reset it completely and stop audio
+          _webViewController?.reload();
+        } else {
+          // Pause Instagram audio
+          _webViewController?.runJavaScript('document.querySelectorAll("video, audio").forEach(media => media.pause());');
+        }
         
         setState(() {}); // Rebuild to switch content
       }
@@ -680,62 +714,80 @@ class _MediaTabsSectionState extends State<_MediaTabsSection> with SingleTickerP
     if (_tabs.isEmpty) return const SizedBox.shrink();
 
     if (_tabs.length == 1) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: _tabs.first == 'YouTube' ? _buildYoutubePlayer() : _buildInstagramPlayer(),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Text(_tabs.first, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primarySaffron)),
+              ),
+              IconButton(
+                icon: const Icon(Icons.fullscreen, color: Colors.grey),
+                tooltip: 'Maximize Video',
+                onPressed: () {
+                  if (_tabs.first == 'YouTube' && widget.event.youtubeUrl != null) {
+                    launchUrl(Uri.parse(widget.event.youtubeUrl!), mode: LaunchMode.externalApplication);
+                  } else if (widget.event.instagramUrl != null) {
+                    launchUrl(Uri.parse(widget.event.instagramUrl!), mode: LaunchMode.externalApplication);
+                  }
+                },
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _tabs.first == 'YouTube' ? _buildYoutubePlayer() : _buildInstagramPlayer(),
+          ),
+        ],
       );
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        TabBar(
-          controller: _tabController,
-          labelColor: AppColors.primarySaffron,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: AppColors.primarySaffron,
-          tabs: _tabs.map((t) => Tab(text: t)).toList(),
-          onTap: (_) => setState(() {}),
+        Row(
+          children: [
+            Expanded(
+              child: TabBar(
+                controller: _tabController,
+                labelColor: AppColors.primarySaffron,
+                unselectedLabelColor: Colors.grey,
+                indicatorColor: AppColors.primarySaffron,
+                tabs: _tabs.map((t) => Tab(text: t)).toList(),
+                onTap: (_) => setState(() {}),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.fullscreen, color: Colors.grey),
+              tooltip: 'Maximize Video',
+              onPressed: () {
+                if (_tabs[_tabController.index] == 'YouTube' && widget.event.youtubeUrl != null) {
+                  launchUrl(Uri.parse(widget.event.youtubeUrl!), mode: LaunchMode.externalApplication);
+                } else if (widget.event.instagramUrl != null) {
+                  launchUrl(Uri.parse(widget.event.instagramUrl!), mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
+            const SizedBox(width: 8),
+          ],
         ),
         AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
           // Calculate YouTube 16:9 height dynamically based on screen width. Instagram is 550.
           height: _tabs[_tabController.index] == 'YouTube' ? (MediaQuery.of(context).size.width * 9 / 16) : 550,
-          child: Stack(
-            children: [
-              ClipRect(
-                child: IndexedStack(
-                  index: _tabController.index,
-                  children: _tabs.map<Widget>((tab) {
-                    if (tab == 'YouTube') return _buildYoutubePlayer();
-                    if (tab == 'Instagram') return _buildInstagramPlayer();
-                    return const SizedBox.shrink();
-                  }).toList(),
-                ),
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.fullscreen, color: Colors.white, size: 24),
-                    tooltip: 'Maximize Video',
-                    onPressed: () {
-                      if (_tabs[_tabController.index] == 'YouTube') {
-                        widget.youtubeController?.enterFullScreen();
-                      } else if (widget.event.instagramUrl != null) {
-                        launchUrl(Uri.parse(widget.event.instagramUrl!), mode: LaunchMode.externalApplication);
-                      }
-                    },
-                  ),
-                ),
-              ),
-            ],
+          child: ClipRect(
+            child: IndexedStack(
+              index: _tabController.index,
+              children: _tabs.map<Widget>((tab) {
+                if (tab == 'YouTube') return _buildYoutubePlayer();
+                if (tab == 'Instagram') return _buildInstagramPlayer();
+                return const SizedBox.shrink();
+              }).toList(),
+            ),
           ),
         ),
       ],
