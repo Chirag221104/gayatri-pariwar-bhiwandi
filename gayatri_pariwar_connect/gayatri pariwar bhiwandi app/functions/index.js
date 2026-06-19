@@ -1728,3 +1728,67 @@ exports.deleteRandomSelection = onCall({ region: region }, async (request) => {
         throw new HttpsError("internal", error.message || "Internal server error during deletion.");
     }
 });
+
+// Send Event Reminders at 7 AM, 5 PM, 10 PM (Day Before Event)
+exports.eventReminders = onSchedule({
+    schedule: "0 7,17,22 * * *",
+    region: region,
+    timeZone: "Asia/Kolkata"
+}, async (event) => {
+    const db = admin.firestore();
+    const todayInKolkata = DateTime.now().setZone("Asia/Kolkata");
+    const tomorrowInKolkata = todayInKolkata.plus({ days: 1 });
+    
+    const tomorrowStart = tomorrowInKolkata.startOf('day').toJSDate();
+    const tomorrowEnd = tomorrowInKolkata.endOf('day').toJSDate();
+
+    try {
+        const eventsSnap = await db.collection("events")
+            .where("eventDate", ">=", admin.firestore.Timestamp.fromDate(tomorrowStart))
+            .where("eventDate", "<=", admin.firestore.Timestamp.fromDate(tomorrowEnd))
+            .where("isCancelled", "==", false)
+            .get();
+
+        if (eventsSnap.empty) {
+            console.log(`[eventReminders] No events happening tomorrow.`);
+            return { success: true, count: 0 };
+        }
+
+        let notificationsSent = 0;
+        const promises = [];
+
+        eventsSnap.forEach(doc => {
+            const eventData = doc.data();
+            const eventDateStr = eventData.eventDate.toDate ? eventData.eventDate.toDate() : new Date(eventData.eventDate);
+            const eventDateTime = DateTime.fromJSDate(eventDateStr).setZone("Asia/Kolkata");
+            const timeString = eventDateTime.toFormat("h:mm a");
+
+            let reminderType = "";
+            if (todayInKolkata.hour === 7) reminderType = "Morning Reminder";
+            if (todayInKolkata.hour === 17) reminderType = "Evening Reminder";
+            if (todayInKolkata.hour === 22) reminderType = "Final Reminder";
+
+            const payload = {
+                notification: {
+                    title: `🗓️ Tomorrow: ${eventData.title}`,
+                    body: `${reminderType}: This event starts tomorrow at ${timeString}. Don't miss it!`,
+                },
+                data: {
+                    type: "event",
+                    eventId: doc.id,
+                    click_action: "FLUTTER_NOTIFICATION_CLICK",
+                },
+            };
+
+            promises.push(admin.messaging().sendToTopic("events", payload));
+            notificationsSent++;
+        });
+
+        await Promise.all(promises);
+        console.log(`[eventReminders] Sent ${notificationsSent} reminders for tomorrow's events.`);
+        return { success: true, count: notificationsSent };
+    } catch (error) {
+        console.error(`[eventReminders] Failed to send event reminders:`, error);
+        return { success: false, error: error.message };
+    }
+});
