@@ -610,7 +610,7 @@ class _MediaTabsSection extends StatefulWidget {
   State<_MediaTabsSection> createState() => _MediaTabsSectionState();
 }
 
-class _MediaTabsSectionState extends State<_MediaTabsSection> with SingleTickerProviderStateMixin {
+class _MediaTabsSectionState extends State<_MediaTabsSection> with TickerProviderStateMixin {
   late TabController _tabController;
   final List<String> _tabs = [];
   
