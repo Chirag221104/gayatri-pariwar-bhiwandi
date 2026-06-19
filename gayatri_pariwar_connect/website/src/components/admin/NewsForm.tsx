@@ -70,6 +70,7 @@ export default function NewsForm({ initialData, onSave, onCancel, isSaving }: Ne
     const [shortDescription, setShortDescription] = useState(initialData?.shortDescription || "");
     const [fullDescription, setFullDescription] = useState(initialData?.fullDescription || "");
     const [photos, setPhotos] = useState<string[]>(initialData?.photos || (initialData?.imageUrl ? [initialData.imageUrl] : []));
+    const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
     const [category, setCategory] = useState(initialData?.category || CATEGORIES[0]);
 
     const removePhoto = (index: number) => {
@@ -77,15 +78,25 @@ export default function NewsForm({ initialData, onSave, onCancel, isSaving }: Ne
         setIsDirty(true);
     };
 
-    const movePhoto = (idx: number, direction: 'left' | 'right') => {
+    const handleDragStart = (idx: number) => {
+        setDraggedIdx(idx);
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+    };
+
+    const handleDrop = (e: React.DragEvent, targetIdx: number) => {
+        e.preventDefault();
+        if (draggedIdx === null || draggedIdx === targetIdx) return;
+        
         const newPhotos = [...photos];
-        if (direction === 'left' && idx > 0) {
-            [newPhotos[idx - 1], newPhotos[idx]] = [newPhotos[idx], newPhotos[idx - 1]];
-        } else if (direction === 'right' && idx < newPhotos.length - 1) {
-            [newPhotos[idx + 1], newPhotos[idx]] = [newPhotos[idx], newPhotos[idx + 1]];
-        }
+        const [draggedItem] = newPhotos.splice(draggedIdx, 1);
+        newPhotos.splice(targetIdx, 0, draggedItem);
+        
         setPhotos(newPhotos);
         setIsDirty(true);
+        setDraggedIdx(null);
     };
     const [isImportant, setIsImportant] = useState(initialData?.isImportant || false);
     const [status, setStatus] = useState(initialData?.status || "published");
@@ -548,48 +559,31 @@ export default function NewsForm({ initialData, onSave, onCancel, isSaving }: Ne
                             {photos.length > 0 && (
                                 <div className="grid grid-cols-3 gap-3 animate-in fade-in duration-500">
                                     {photos.map((url, idx) => (
-                                        <div key={idx} className={`relative aspect-square rounded-xl overflow-hidden border group ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-                                            <img src={url} alt={`Preview ${idx}`} className="w-full h-full object-cover" />
+                                        <div 
+                                            key={idx} 
+                                            draggable
+                                            onDragStart={() => handleDragStart(idx)}
+                                            onDragOver={handleDragOver}
+                                            onDrop={(e) => handleDrop(e, idx)}
+                                            className={`relative aspect-square rounded-xl overflow-hidden border group cursor-grab active:cursor-grabbing hover:scale-[1.02] transition-all duration-200 ${isDark ? 'border-slate-800' : 'border-slate-200'} ${draggedIdx === idx ? 'opacity-50 ring-2 ring-orange-500 scale-95' : ''}`}
+                                        >
+                                            <img src={url} alt={`Preview ${idx}`} className="w-full h-full object-cover pointer-events-none" />
                                             {idx === 0 && (
-                                                <div className="absolute top-2 left-2 bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">
+                                                <div className="absolute top-2 left-2 bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-md z-10">
                                                     Cover
                                                 </div>
                                             )}
                                             {/* Action Buttons Container */}
-                                            <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                                                 <button
                                                     type="button"
                                                     onClick={() => removePhoto(idx)}
-                                                    className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg text-white shadow-sm"
+                                                    className="p-1.5 bg-red-500/90 hover:bg-red-500 rounded-lg text-white shadow-sm transition-colors"
                                                     title="Remove Photo"
                                                 >
                                                     <Trash2 className="w-3 h-3" />
                                                 </button>
                                             </div>
-
-                                            {/* Reorder Buttons */}
-                                            {photos.length > 1 && (
-                                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-md rounded-lg p-1 shadow-md">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => movePhoto(idx, 'left')}
-                                                        disabled={idx === 0}
-                                                        className="p-1 hover:bg-white/20 rounded-md text-white disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-                                                        title="Move Left"
-                                                    >
-                                                        <ChevronLeft className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => movePhoto(idx, 'right')}
-                                                        disabled={idx === photos.length - 1}
-                                                        className="p-1 hover:bg-white/20 rounded-md text-white disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-                                                        title="Move Right"
-                                                    >
-                                                        <ChevronRight className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            )}
                                         </div>
                                     ))}
                                 </div>

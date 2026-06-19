@@ -49,6 +49,7 @@ export default function NewsPage() {
     const [news, setNews] = useState<NewsItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState('All');
+    const [searchQuery, setSearchQuery] = useState("");
 
     // Lightbox State
     const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -80,9 +81,13 @@ export default function NewsPage() {
         fetchNews();
     }, []);
 
-    const filteredNews = activeCategory === 'All'
-        ? news
-        : news.filter(item => item.category?.toLowerCase() === activeCategory.toLowerCase());
+    const filteredNews = news.filter(item => {
+        const matchesCategory = activeCategory === 'All' || item.category?.toLowerCase() === activeCategory.toLowerCase();
+        const matchesSearch = !searchQuery || 
+            item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            item.shortDescription.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCategory && matchesSearch;
+    });
 
     const handleShare = (item: NewsItem) => {
         if (typeof navigator !== 'undefined' && navigator.share) {
@@ -129,9 +134,18 @@ export default function NewsPage() {
                 </motion.div>
             </section>
 
-            {/* Category Filter Bar - Normal scrolling, between hero and content */}
+            {/* Filter & Search Bar - Normal scrolling, between hero and content */}
             <div className="-mt-36 pb-16 flex justify-center relative z-30">
-                <div className="container mx-auto px-6 max-w-7xl flex justify-center">
+                <div className="container mx-auto px-6 max-w-7xl flex flex-col items-center gap-4">
+                    <div className="w-full max-w-2xl">
+                        <input 
+                            type="text" 
+                            placeholder="Search news by title or description..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white dark:border-white/5 rounded-2xl py-4 px-6 text-sm font-semibold outline-none focus:ring-2 focus:ring-saffron shadow-xl transition-all text-slate-900 dark:text-white placeholder:text-slate-500"
+                        />
+                    </div>
                     <div className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl p-2 rounded-3xl border border-white dark:border-white/5 shadow-2xl flex md:flex-wrap items-center justify-start md:justify-center gap-1 mx-auto w-full md:w-fit overflow-x-auto md:overflow-hidden scrollbar-hide">
                         {categories.map(cat => (
                             <button

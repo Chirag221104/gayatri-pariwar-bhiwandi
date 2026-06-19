@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -23,6 +23,8 @@ interface EventDetail {
     imageUrl?: string;
     photos?: string[];
     type: string;
+    youtubeUrl?: string;
+    instagramUrl?: string;
 }
 
 export default function EventDetailPage() {
@@ -33,6 +35,49 @@ export default function EventDetailPage() {
     const [event, setEvent] = useState<EventDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeImage, setActiveImage] = useState<string | null>(null);
+    const [activeVideoTab, setActiveVideoTab] = useState<'youtube' | 'instagram'>('youtube');
+    
+    // Fullscreen state and ref
+    const videoContainerRef = useRef<HTMLDivElement>(null);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    }, []);
+
+    const toggleFullscreen = async () => {
+        if (!document.fullscreenElement) {
+            try {
+                await videoContainerRef.current?.requestFullscreen();
+                // Smart Orientation Lock
+                const screenOrientation = (window.screen.orientation as any);
+                if (window.screen && window.screen.orientation && screenOrientation.lock) {
+                    const isPortrait = activeVideoTab === 'instagram' || (activeVideoTab === 'youtube' && event?.youtubeUrl?.includes('/shorts/'));
+                    screenOrientation.lock(isPortrait ? 'portrait' : 'landscape').catch((e: any) => console.warn('Orientation lock failed:', e));
+                }
+            } catch (err: any) {
+                console.error(`Error attempting to enable fullscreen: ${err.message}`);
+            }
+        } else {
+            document.exitFullscreen();
+            const screenOrientation = (window.screen.orientation as any);
+            if (window.screen && window.screen.orientation && screenOrientation.unlock) {
+                screenOrientation.unlock();
+            }
+        }
+    };
+
+    // Update active video tab when event loads
+    useEffect(() => {
+        if (event) {
+            if (event.youtubeUrl) setActiveVideoTab('youtube');
+            else if (event.instagramUrl) setActiveVideoTab('instagram');
+        }
+    }, [event]);
 
     // Lightbox State
     const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -95,7 +140,7 @@ export default function EventDetailPage() {
                     {/* Image Box */}
                     <div className="md:w-1/2 w-full space-y-4">
                         <div
-                            className="aspect-video rounded-3xl overflow-hidden shadow-2xl border-4 border-white/10 relative bg-muted cursor-pointer group"
+                            className={`aspect-video rounded-3xl overflow-hidden shadow-2xl border-4 border-white/10 relative bg-muted group cursor-pointer`}
                             onClick={() => {
                                 if (activeImage) {
                                     const index = allPhotos.indexOf(activeImage);
@@ -125,11 +170,12 @@ export default function EventDetailPage() {
                                     {event.type === 'yagya' ? '🔥' : '🕉️'}
                                 </div>
                             )}
-                            <div className="absolute top-6 left-6 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black text-saffron-dark uppercase tracking-widest border border-white/50 dark:border-white/10 shadow-sm z-10">
+
+                            <div className="absolute top-6 left-6 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black text-saffron-dark uppercase tracking-widest border border-white/50 dark:border-white/10 shadow-sm z-10 pointer-events-none">
                                 {t(`categories.${event.type?.toLowerCase() || 'general'}`)}
                             </div>
                             {isPast && (
-                                <div className="absolute top-6 right-6 bg-gray-900/80 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black text-white uppercase tracking-[0.2em] border border-white/20 z-10">
+                                <div className="absolute top-6 right-6 bg-gray-900/80 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black text-white uppercase tracking-[0.2em] border border-white/20 z-10 pointer-events-none">
                                     {t('detail.past_badge')}
                                 </div>
                             )}
@@ -217,6 +263,83 @@ export default function EventDetailPage() {
                 </div>
             </section>
 
+            {/* Embedded Media Section */}
+            {(event.youtubeUrl || event.instagramUrl) && (
+                <section className="container mx-auto max-w-4xl px-4 pt-8">
+                    {event.youtubeUrl && event.instagramUrl && (
+                        <div className="flex gap-2 mb-4">
+                            <button
+                                onClick={() => setActiveVideoTab('youtube')}
+                                className={`flex-1 py-3 rounded-t-2xl font-bold transition-all border-b-4 ${activeVideoTab === 'youtube' ? 'bg-red-50 text-red-600 border-red-500' : 'bg-white/5 text-muted border-transparent hover:text-foreground'}`}
+                            >
+                                YouTube
+                            </button>
+                            <button
+                                onClick={() => setActiveVideoTab('instagram')}
+                                className={`flex-1 py-3 rounded-t-2xl font-bold transition-all border-b-4 ${activeVideoTab === 'instagram' ? 'bg-purple-50 text-purple-600 border-purple-500' : 'bg-white/5 text-muted border-transparent hover:text-foreground'}`}
+                            >
+                                Instagram
+                            </button>
+                        </div>
+                    )}
+                    
+                    <div 
+                        ref={videoContainerRef} 
+                        className={`w-full mx-auto rounded-3xl overflow-hidden shadow-2xl relative group ${
+                            activeVideoTab === 'youtube' 
+                                ? 'aspect-video bg-black' 
+                                : 'h-[600px] max-w-[500px] md:h-[750px] bg-white'
+                        }`}
+                    >
+                        {/* Fullscreen Toggle Button */}
+                        <button 
+                            onClick={toggleFullscreen}
+                            className="absolute bottom-4 right-4 z-20 bg-black/60 hover:bg-black text-white p-2.5 rounded-xl backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 shadow-lg border border-white/10"
+                            title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                        >
+                            {isFullscreen ? (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/></svg>
+                            ) : (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
+                            )}
+                        </button>
+
+                        {activeVideoTab === 'youtube' && event.youtubeUrl && (() => {
+                            const videoId = event.youtubeUrl!.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})/)?.[1];
+                            if (!videoId) return <div className="w-full h-full flex items-center justify-center bg-black text-white">Invalid YouTube URL</div>;
+                            return (
+                                <iframe
+                                    className="w-full h-full"
+                                    src={`https://www.youtube.com/embed/${videoId}?rel=0`}
+                                    title="YouTube video player"
+                                    frameBorder="0"
+                                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allowFullScreen
+                                />
+                            );
+                        })()}
+
+                        {activeVideoTab === 'instagram' && event.instagramUrl && (() => {
+                            let instaUrl = event.instagramUrl!;
+                            if (instaUrl.includes('?')) instaUrl = instaUrl.split('?')[0];
+                            const embedUrl = instaUrl.endsWith('/embed') || instaUrl.endsWith('/embed/') ? instaUrl : (instaUrl.endsWith('/') ? `${instaUrl}embed` : `${instaUrl}/embed`);
+                            return (
+                                <div className={`w-full h-full flex items-center justify-center ${isFullscreen ? 'bg-black/95' : 'bg-white'}`}>
+                                    <iframe
+                                        className="w-full h-full bg-white"
+                                        style={isFullscreen ? { maxWidth: 'min(540px, calc(100vh * 9 / 16))', maxHeight: '100vh', borderRadius: '12px' } : undefined}
+                                        src={embedUrl}
+                                        frameBorder="0"
+                                        scrolling="no"
+                                        allowFullScreen={true}
+                                    />
+                                </div>
+                            );
+                        })()}
+                    </div>
+                </section>
+            )}
+
             {/* Description Section */}
             <section className="container mx-auto max-w-4xl px-4 py-16">
                 <h2 className="text-2xl font-black font-display text-foreground mb-8 flex items-center gap-3">
@@ -226,6 +349,8 @@ export default function EventDetailPage() {
                 <div className="glass p-10 rounded-[2.5rem] border-white/10 text-muted leading-relaxed text-lg whitespace-pre-wrap font-medium opacity-90">
                     {event.description}
                 </div>
+
+                {/* Bottom Social Links removed in favor of embedded media tabs */}
 
                 <div className="mt-16 flex items-center justify-between">
                     <Link href={`/${locale}/events`} className="flex items-center gap-2 text-saffron-dark font-black hover:gap-4 transition-all uppercase text-[10px] tracking-widest group">

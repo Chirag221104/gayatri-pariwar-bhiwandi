@@ -62,6 +62,10 @@ export default function EventsPage() {
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+    // Filter State
+    const [searchQuery, setSearchQuery] = useState("");
+    const [filterStatus, setFilterStatus] = useState("all");
+
     useEffect(() => {
         setNow(Date.now());
         async function fetchEvents() {
@@ -87,14 +91,22 @@ export default function EventsPage() {
         fetchEvents();
     }, []);
 
-    const ongoingEvents = events.filter(e => {
+    const filteredSearchEvents = events.filter(e => {
+        if (!searchQuery) return true;
+        const query = searchQuery.toLowerCase();
+        return e.title.toLowerCase().includes(query) || 
+               e.description.toLowerCase().includes(query) ||
+               e.location.toLowerCase().includes(query);
+    });
+
+    const ongoingEvents = filteredSearchEvents.filter(e => {
         const effectiveEndDate = e.isMultiDay && e.endDate ? e.endDate : e.eventDate;
         return e.eventDate.toMillis() <= now && effectiveEndDate.toMillis() >= now;
     });
     
-    const upcomingEvents = events.filter(e => e.eventDate.toMillis() > now);
+    const upcomingEvents = filteredSearchEvents.filter(e => e.eventDate.toMillis() > now);
     
-    const pastEvents = events.filter(e => {
+    const pastEvents = filteredSearchEvents.filter(e => {
         const effectiveEndDate = e.isMultiDay && e.endDate ? e.endDate : e.eventDate;
         return effectiveEndDate.toMillis() < now;
     });
@@ -170,9 +182,42 @@ export default function EventsPage() {
                         <p className="text-muted font-medium">{error}</p>
                     </div>
                 ) : (
-                    <div className="space-y-32">
+                    <div className="space-y-12">
+                        {/* Filter & Search Bar */}
+                        <motion.div 
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-xl flex flex-col md:flex-row items-center gap-4 sticky top-24 z-30"
+                        >
+                            <div className="flex-1 relative w-full">
+                                <input 
+                                    type="text" 
+                                    placeholder="Search events by title, description, or location..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full bg-slate-100 dark:bg-slate-800/50 border-none rounded-2xl py-3 px-6 text-sm font-semibold outline-none focus:ring-2 focus:ring-saffron transition-all"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+                                {['all', 'ongoing', 'upcoming', 'past'].map(status => (
+                                    <button
+                                        key={status}
+                                        onClick={() => setFilterStatus(status)}
+                                        className={`px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all ${
+                                            filterStatus === status 
+                                            ? 'bg-saffron text-white shadow-lg shadow-saffron/20' 
+                                            : 'bg-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                        }`}
+                                    >
+                                        {status}
+                                    </button>
+                                ))}
+                            </div>
+                        </motion.div>
+
+                        <div className="space-y-32">
                         {/* Ongoing Events */}
-                        {ongoingEvents.length > 0 && (
+                        {(filterStatus === 'all' || filterStatus === 'ongoing') && ongoingEvents.length > 0 && (
                             <motion.section
                                 variants={containerVariants}
                                 initial="hidden"
@@ -210,7 +255,8 @@ export default function EventsPage() {
                         )}
 
                         {/* Upcoming Events */}
-                        <motion.section
+                        {(filterStatus === 'all' || filterStatus === 'upcoming') && (
+                            <motion.section
                             variants={containerVariants}
                             initial="hidden"
                             whileInView="visible"
@@ -249,9 +295,11 @@ export default function EventsPage() {
                                 </div>
                             )}
                         </motion.section>
+                        )}
 
                         {/* Past Events */}
-                        <motion.section
+                        {(filterStatus === 'all' || filterStatus === 'past') && (
+                            <motion.section
                             variants={containerVariants}
                             initial="hidden"
                             whileInView="visible"
@@ -282,9 +330,11 @@ export default function EventsPage() {
                                 </div>
                             )}
                         </motion.section>
+                        )}
                     </div>
-                )}
-            </div>
+                </div>
+            )}
+        </div>
 
             <ImageLightbox
                 isOpen={lightboxOpen}

@@ -18,6 +18,12 @@ import '../../admin/presentation/widgets/user_search_field.dart';
 import '../../admin/presentation/widgets/admin_form_dialog.dart';
 import '../../../core/l10n/app_localizations.dart';
 
+class _MediaItem {
+  final String? url;
+  final File? file;
+  _MediaItem({this.url, this.file});
+}
+
 class CreateEditEventScreen extends ConsumerStatefulWidget {
   final String? eventId;
   final String? initialGroupId;
@@ -54,10 +60,13 @@ class _CreateEditEventScreenState extends ConsumerState<CreateEditEventScreen> {
   final _contactRoleController = TextEditingController();
   
   // Photo management
-  final List<File> _selectedPhotos = [];
-  final List<String> _existingPhotos = [];
+  final List<_MediaItem> _mediaItems = [];
   final ImagePicker _picker = ImagePicker();
   String _uploadStatus = '';
+
+  // Event Media Links
+  final _youtubeUrlController = TextEditingController();
+  final _instagramUrlController = TextEditingController();
 
   @override
   void initState() {
@@ -81,7 +90,7 @@ class _CreateEditEventScreenState extends ConsumerState<CreateEditEventScreen> {
           _isMultiDay = event.isMultiDay;
           _hasTime = event.hasTime;
           _endDate = event.endDate;
-          _existingPhotos.addAll(event.photos);
+          _mediaItems.addAll(event.photos.map((p) => _MediaItem(url: p)));
           _selectedGroupId = event.linkedGroupId;
           
           // Media folder check - support both legacy path and new ID
@@ -126,6 +135,10 @@ class _CreateEditEventScreenState extends ConsumerState<CreateEditEventScreen> {
           // Role and Phone loading
           _contactRoleController.text = event.responsiblePersonRole ?? event.contactRole ?? '';
           _contactPhoneController.text = event.responsiblePersonPhone ?? event.contactPhone ?? '';
+          
+          // Media Links loading
+          _youtubeUrlController.text = event.youtubeUrl ?? '';
+          _instagramUrlController.text = event.instagramUrl ?? '';
         });
       }
     } catch (e) {
@@ -143,6 +156,8 @@ class _CreateEditEventScreenState extends ConsumerState<CreateEditEventScreen> {
     _contactPhoneController.dispose();
     _contactNameController.dispose();
     _contactRoleController.dispose();
+    _youtubeUrlController.dispose();
+    _instagramUrlController.dispose();
 
     super.dispose();
   }
@@ -233,7 +248,7 @@ class _CreateEditEventScreenState extends ConsumerState<CreateEditEventScreen> {
       
       if (pickedFiles.isNotEmpty) {
         setState(() {
-          _selectedPhotos.addAll(pickedFiles.map((xf) => File(xf.path)));
+          _mediaItems.addAll(pickedFiles.map((xf) => _MediaItem(file: File(xf.path))));
         });
       }
     } catch (e) {
@@ -247,46 +262,8 @@ class _CreateEditEventScreenState extends ConsumerState<CreateEditEventScreen> {
 
   void _removePhoto(int index) {
     setState(() {
-      _selectedPhotos.removeAt(index);
+      _mediaItems.removeAt(index);
     });
-  }
-
-  void _removeExistingPhoto(int index) {
-    setState(() {
-      _existingPhotos.removeAt(index);
-    });
-  }
-
-  Future<List<String>> _uploadPhotosToCloudinary() async {
-    final uploadedUrls = <String>[];
-    
-    for (int i = 0; i < _selectedPhotos.length; i++) {
-      setState(() {
-        _uploadStatus = 'Uploading photo ${i + 1} of ${_selectedPhotos.length}...';
-      });
-      
-      try {
-        final bytes = await _selectedPhotos[i].readAsBytes();
-        final base64Image = 'data:image/jpeg;base64,${base64Encode(bytes)}';
-        
-        final result = await FirebaseFunctions.instanceFor(region: 'asia-south1')
-            .httpsCallable('uploadImage')
-            .call({
-          'image': base64Image,
-          'folder': 'event_images',
-        });
-        
-        final data = result.data as Map<dynamic, dynamic>;
-        final url = data['secure_url'] as String?;
-        if (url != null) {
-          uploadedUrls.add(url);
-        }
-      } catch (e) {
-        debugPrint('Error uploading photo $i: $e');
-      }
-    }
-    
-    return uploadedUrls;
   }
 
   Future<void> _saveEvent() async {
@@ -301,10 +278,39 @@ class _CreateEditEventScreenState extends ConsumerState<CreateEditEventScreen> {
       final user = ref.read(currentUserDataProvider).valueOrNull;
       if (user == null) throw Exception('User not logged in');
 
-      // Upload new photos if any
-      List<String> newPhotoUrls = [];
-      if (_selectedPhotos.isNotEmpty) {
-        newPhotoUrls = await _uploadPhotosToCloudinary();
+      // Upload new photos and preserve overall order
+      List<String> finalPhotoUrls = [];
+      int uploadIndex = 1;
+      int totalToUpload = _mediaItems.where((m) => m.file != null).length;
+
+      for (var item in _mediaItems) {
+        if (item.url != null) {
+          finalPhotoUrls.add(item.url!);
+        } else if (item.file != null) {
+          setState(() {
+            _uploadStatus = 'Uploading photo $uploadIndex of $totalToUpload...';
+          });
+          try {
+            final bytes = await item.file!.readAsBytes();
+            final base64Image = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+            
+            final result = await FirebaseFunctions.instanceFor(region: 'asia-south1')
+                .httpsCallable('uploadImage')
+                .call({
+              'image': base64Image,
+              'folder': 'event_images',
+            });
+            
+            final data = result.data as Map<dynamic, dynamic>;
+            final url = data['secure_url'] as String?;
+            if (url != null) {
+              finalPhotoUrls.add(url);
+            }
+          } catch (e) {
+            debugPrint('Error uploading photo: $e');
+          }
+          uploadIndex++;
+        }
       }
 
       setState(() {
@@ -324,7 +330,7 @@ class _CreateEditEventScreenState extends ConsumerState<CreateEditEventScreen> {
         endTime: (_hasTime && _isMultiDay && _endDate != null) ? DateFormat('HH:mm').format(_endDate!) : null,
         createdBy: user.uid,
         createdAt: DateTime.now(),
-        photos: [..._existingPhotos, ...newPhotoUrls],
+        photos: finalPhotoUrls,
         mediaFolderPath: _selectedFolderId != null 
             ? '/storage/folder/$_selectedFolderId' 
             : null,
@@ -343,6 +349,10 @@ class _CreateEditEventScreenState extends ConsumerState<CreateEditEventScreen> {
         responsiblePersonName: _useManualContact ? _contactNameController.text.trim() : (_selectedContactUser?.name),
         responsiblePersonRole: _contactRoleController.text.trim().isNotEmpty ? _contactRoleController.text.trim() : null,
         responsiblePersonPhone: _contactPhoneController.text.trim().isNotEmpty ? _contactPhoneController.text.trim() : null,
+
+        // Event Media Links
+        youtubeUrl: _youtubeUrlController.text.trim().isNotEmpty ? _youtubeUrlController.text.trim() : null,
+        instagramUrl: _instagramUrlController.text.trim().isNotEmpty ? _instagramUrlController.text.trim() : null,
       );
 
       if (widget.eventId == null) {
@@ -407,8 +417,7 @@ class _CreateEditEventScreenState extends ConsumerState<CreateEditEventScreen> {
                   
                   SizedBox(
                     height: 120,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
+                    child: Row(
                       children: [
                         // New photo picker button
                         GestureDetector(
@@ -432,17 +441,31 @@ class _CreateEditEventScreenState extends ConsumerState<CreateEditEventScreen> {
                           ),
                         ),
                         
-                        // Existing photos
-                        ..._existingPhotos.asMap().entries.map((entry) => _ImageCard(
-                          imageUrl: entry.value,
-                          onRemove: () => _removeExistingPhoto(entry.key),
-                        )),
-                        
-                        // Newly selected photos
-                        ..._selectedPhotos.asMap().entries.map((entry) => _ImageCard(
-                          file: entry.value,
-                          onRemove: () => _removePhoto(entry.key),
-                        )),
+                        Expanded(
+                          child: ReorderableListView(
+                            scrollDirection: Axis.horizontal,
+                            onReorder: (oldIndex, newIndex) {
+                              setState(() {
+                                if (newIndex > oldIndex) {
+                                  newIndex -= 1;
+                                }
+                                final item = _mediaItems.removeAt(oldIndex);
+                                _mediaItems.insert(newIndex, item);
+                              });
+                            },
+                            children: [
+                              for (int i = 0; i < _mediaItems.length; i++)
+                                _ImageCard(
+                                  // Must provide a unique key for ReorderableListView
+                                  key: ValueKey('${_mediaItems[i].url ?? ''}_${_mediaItems[i].file?.path ?? ''}_$i'),
+                                  imageUrl: _mediaItems[i].url,
+                                  file: _mediaItems[i].file,
+                                  isFirst: i == 0,
+                                  onRemove: () => _removePhoto(i),
+                                ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -801,6 +824,86 @@ class _CreateEditEventScreenState extends ConsumerState<CreateEditEventScreen> {
                   ),
 
                   const SizedBox(height: 32),
+
+                  // Event Media Links (Optional)
+                  Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.play_circle_outline, color: Colors.red.shade400, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Event Media (Optional)',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Add YouTube or Instagram links for this event',
+                            style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _youtubeUrlController,
+                            decoration: InputDecoration(
+                              labelText: 'YouTube URL',
+                              hintText: 'https://www.youtube.com/watch?v=...',
+                              prefixIcon: Icon(Icons.smart_display, color: Colors.red.shade400),
+                              filled: true,
+                              fillColor: inputFillColor,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            keyboardType: TextInputType.url,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) return null;
+                              final v = value.trim();
+                              if (!v.startsWith('https://www.youtube.com/') && !v.startsWith('https://youtu.be/') && !v.startsWith('https://youtube.com/')) {
+                                return 'Please enter a valid YouTube URL';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          TextFormField(
+                            controller: _instagramUrlController,
+                            decoration: InputDecoration(
+                              labelText: 'Instagram URL',
+                              hintText: 'https://www.instagram.com/reel/...',
+                              prefixIcon: Icon(Icons.camera_alt, color: Colors.purple.shade400),
+                              filled: true,
+                              fillColor: inputFillColor,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            keyboardType: TextInputType.url,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) return null;
+                              final v = value.trim();
+                              if (!v.startsWith('https://www.instagram.com/') && !v.startsWith('https://instagram.com/')) {
+                                return 'Please enter a valid Instagram URL';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
                   
                   if (_uploadStatus.isNotEmpty)
                     Padding(
@@ -838,9 +941,16 @@ class _CreateEditEventScreenState extends ConsumerState<CreateEditEventScreen> {
 class _ImageCard extends StatelessWidget {
   final String? imageUrl;
   final File? file;
+  final bool isFirst;
   final VoidCallback onRemove;
 
-  const _ImageCard({this.imageUrl, this.file, required this.onRemove});
+  const _ImageCard({
+    super.key,
+    this.imageUrl, 
+    this.file, 
+    required this.isFirst,
+    required this.onRemove,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -855,6 +965,21 @@ class _ImageCard extends StatelessWidget {
                 ? Image.file(file!, width: 120, height: 120, fit: BoxFit.cover)
                 : Image.network(imageUrl!, width: 120, height: 120, fit: BoxFit.cover),
           ),
+          
+          if (isFirst)
+            Positioned(
+              top: 4,
+              left: 4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.primarySaffron,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text('Cover', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+              ),
+            ),
+            
           Positioned(
             top: 4,
             right: 4,
