@@ -131,6 +131,19 @@ class _EventDetailContentState extends ConsumerState<_EventDetailContent> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(_EventDetailContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.event.youtubeUrl != widget.event.youtubeUrl) {
+      if (widget.event.youtubeUrl == null || widget.event.youtubeUrl!.isEmpty) {
+        _youtubeController?.close();
+        setState(() => _youtubeController = null);
+      } else {
+        _resetYoutubeController();
+      }
+    }
+  }
+
   void _resetYoutubeController() {
     if (widget.event.youtubeUrl != null && widget.event.youtubeUrl!.isNotEmpty) {
       final videoId = YoutubePlayerController.convertUrlToId(widget.event.youtubeUrl!);
@@ -607,6 +620,20 @@ class _MediaTabsSectionState extends State<_MediaTabsSection> with SingleTickerP
   void initState() {
     super.initState();
     _initTabs();
+  }
+
+  @override
+  void didUpdateWidget(_MediaTabsSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.event.youtubeUrl != widget.event.youtubeUrl || 
+        oldWidget.event.instagramUrl != widget.event.instagramUrl ||
+        oldWidget.youtubePlayerWidget != widget.youtubePlayerWidget) {
+      // Re-init tabs if media changes
+      _tabController.dispose();
+      _tabs.clear();
+      _initTabs();
+      setState(() {});
+    }
   }
 
   void _initTabs() {
