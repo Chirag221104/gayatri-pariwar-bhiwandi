@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter/services.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/ui_utils.dart';
 import '../../../core/auth/user_roles.dart';
@@ -449,10 +450,10 @@ class _EventDetailContentState extends ConsumerState<_EventDetailContent> {
       
       return YoutubePlayerScaffold(
         controller: _youtubeController!,
-        defaultOrientations: const [DeviceOrientation.portraitUp],
+        defaultOrientations: [DeviceOrientation.portraitUp],
         fullscreenOrientations: isPortraitVideo
-            ? const [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]
-            : const [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight],
+            ? [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]
+            : [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight],
         builder: (context, player) {
           return _buildBody(context, ref, player);
         },
@@ -638,12 +639,10 @@ class _MediaTabsSectionState extends State<_MediaTabsSection> with SingleTickerP
     _tabController = TabController(length: _tabs.length > 0 ? _tabs.length : 1, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
-        // Reset YouTube to thumbnail (cue state)
+        // Reset YouTube to 0s and pause
         if (widget.event.youtubeUrl != null && widget.youtubeController != null) {
-          final videoId = YoutubePlayerController.convertUrlToId(widget.event.youtubeUrl!);
-          if (videoId != null) {
-            widget.youtubeController!.cueVideoById(videoId: videoId);
-          }
+          widget.youtubeController!.pauseVideo();
+          widget.youtubeController!.seekTo(seconds: 0.0, allowSeekAhead: false);
         }
         // Reload Instagram webview to reset it completely and stop audio
         _webViewController?.reload();
@@ -698,13 +697,46 @@ class _MediaTabsSectionState extends State<_MediaTabsSection> with SingleTickerP
           tabs: _tabs.map((t) => Tab(text: t)).toList(),
           onTap: (_) => setState(() {}),
         ),
-        AnimatedSize(
+        AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
-          alignment: Alignment.topCenter,
-          child: _tabs[_tabController.index] == 'YouTube' 
-              ? _buildYoutubePlayer() 
-              : _buildInstagramPlayer(),
+          // Calculate YouTube 16:9 height dynamically based on screen width. Instagram is 550.
+          height: _tabs[_tabController.index] == 'YouTube' ? (MediaQuery.of(context).size.width * 9 / 16) : 550,
+          child: Stack(
+            children: [
+              ClipRect(
+                child: IndexedStack(
+                  index: _tabController.index,
+                  children: _tabs.map<Widget>((tab) {
+                    if (tab == 'YouTube') return _buildYoutubePlayer();
+                    if (tab == 'Instagram') return _buildInstagramPlayer();
+                    return const SizedBox.shrink();
+                  }).toList(),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.fullscreen, color: Colors.white, size: 24),
+                    tooltip: 'Maximize Video',
+                    onPressed: () {
+                      if (_tabs[_tabController.index] == 'YouTube') {
+                        widget.youtubeController?.enterFullScreen();
+                      } else if (widget.event.instagramUrl != null) {
+                        launchUrl(Uri.parse(widget.event.instagramUrl!), mode: LaunchMode.externalApplication);
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
