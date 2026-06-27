@@ -39,6 +39,7 @@ export default function Navbar() {
         { href: '/events', label: t('events') },
         { href: '/spiritual', label: t('spiritual') },
         { href: '/books', label: t('buy_books') },
+        { href: '/posts', label: t.has('posts') ? t('posts') : 'Community Feed' },
         { href: '/news', label: t('news') },
         { href: '/about', label: t('about') },
         { href: '/contact', label: t('contact') },

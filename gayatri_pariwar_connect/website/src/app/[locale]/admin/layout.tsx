@@ -30,6 +30,7 @@ import {
     Printer,
     ShieldAlert,
     GraduationCap,
+    Image as ImageIcon,
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
@@ -75,6 +76,7 @@ const navGroups: NavGroup[] = [
         items: [
             { name: "Events", href: "/admin/events", icon: Calendar },
             { name: "News & Activities", href: "/admin/news", icon: Newspaper },
+            { name: "Community Posts", href: "/admin/posts", icon: ImageIcon },
             { name: "Spiritual Content", href: "/admin/spiritual", icon: Sprout },
             { name: "Sanskar Courses", href: "/admin/lms", icon: GraduationCap },
             { name: "Media Library", href: "/admin/media", icon: FileText },

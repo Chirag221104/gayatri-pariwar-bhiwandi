@@ -92,6 +92,7 @@ export function processContentDistribution(counts: Record<string, number>): Char
         { name: 'News', value: counts.news || 0 },
         { name: 'Media', value: counts.media || 0 },
         { name: 'Seva', value: counts.seva || 0 },
+        { name: 'Posts', value: counts.posts || 0 },
     ].filter(item => item.value > 0);
 }
 

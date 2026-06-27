@@ -13,7 +13,8 @@ import {
     PieChart as LucidePieChart,
     Clock,
     ChevronRight,
-    LayoutDashboard
+    LayoutDashboard,
+    MessageCircle
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, limit, orderBy } from "firebase/firestore";
@@ -37,6 +38,7 @@ import {
 interface DashboardStats {
     totalUsers: number;
     totalEvents: number;
+    totalPosts: number;
     pendingRequests: number;
     activeSeva: number;
 }
@@ -49,6 +51,7 @@ export default function AdminDashboard() {
     const [stats, setStats] = useState<DashboardStats>({
         totalUsers: 0,
         totalEvents: 0,
+        totalPosts: 0,
         pendingRequests: 0,
         activeSeva: 0
     });
@@ -108,10 +111,14 @@ export default function AdminDashboard() {
                 // Fetch News & Media for content distribution
                 const newsSnap = await getDocs(collection(db, "news"));
                 const mediaSnap = await getDocs(collection(db, "media"));
+                
+                // Fetch Posts
+                const postsSnap = await getDocs(collection(db, "posts"));
 
                 setStats({
                     totalUsers: userSnap.size,
                     totalEvents: eventSnap.size,
+                    totalPosts: postsSnap.size,
                     pendingRequests: requestSnap.docs.filter(d => d.data().status === "pending" || d.data().status === "requested").length,
                     activeSeva: sevaSnap.docs.filter(d => d.data().status === "active" || d.data().status === "published").length
                 });
@@ -124,7 +131,8 @@ export default function AdminDashboard() {
                     events: eventSnap.size,
                     news: newsSnap.size,
                     media: mediaSnap.size,
-                    seva: sevaSnap.size
+                    seva: sevaSnap.size,
+                    posts: postsSnap.size
                 }));
 
                 setSevaFulfillmentData(processSevaFulfillment(allSeva));
@@ -164,6 +172,15 @@ export default function AdminDashboard() {
             href: "/admin/events"
         },
         {
+            name: "Community Posts",
+            value: stats.totalPosts,
+            icon: MessageCircle,
+            trend: "Active",
+            trendUp: true,
+            primary: false,
+            href: "/admin/posts"
+        },
+        {
             name: "Pending Requests",
             value: stats.pendingRequests,
             icon: ClipboardList,
@@ -190,7 +207,7 @@ export default function AdminDashboard() {
                     <div className={`h-8 rounded-lg w-1/4 mb-2 ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`} />
                     <div className={`h-4 rounded w-1/3 ${isDark ? 'bg-slate-700/50' : 'bg-slate-200/70'}`} />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-5">
                     {[1, 2, 3, 4].map(i => (
                         <div
                             key={i}
@@ -211,7 +228,7 @@ export default function AdminDashboard() {
             />
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-5">
                 {statCards.map((card, index) => (
                     <div
                         key={card.name}
@@ -413,7 +430,7 @@ export default function AdminDashboard() {
                             Content Presence
                         </h3>
                     </div>
-                    <div className="h-64">
+                    <div className="h-64 relative flex items-center justify-center">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -432,6 +449,14 @@ export default function AdminDashboard() {
                                 <Tooltip />
                             </PieChart>
                         </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                                {contentData.reduce((acc, item) => acc + item.value, 0)}
+                            </span>
+                            <span className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                Total Items
+                            </span>
+                        </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2 mt-4">
                         {contentData.map((item, index) => (

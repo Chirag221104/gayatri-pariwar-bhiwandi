@@ -1792,3 +1792,41 @@ exports.eventReminders = onSchedule({
         return { success: false, error: error.message };
     }
 });
+
+// ==========================================
+// NOTIFICATIONS FOR NEW POSTS
+// ==========================================
+exports.onPostCreated = functions.firestore
+    .document("posts/{postId}")
+    .onCreate(async (snap, context) => {
+        const postData = snap.data();
+
+        if (!postData) return null;
+
+        let bodyText = postData.caption || "A new post was added to the community feed.";
+        if (bodyText.length > 100) {
+            bodyText = bodyText.substring(0, 97) + "...";
+        }
+
+        const payload = {
+            notification: {
+                title: "New Community Post",
+                body: bodyText,
+                sound: "default",
+            },
+            data: {
+                type: "post",
+                postId: context.params.postId,
+                click_action: "FLUTTER_NOTIFICATION_CLICK",
+            },
+        };
+
+        try {
+            const response = await admin.messaging().sendToTopic("all_users", payload);
+            console.log(`[onPostCreated] Successfully sent notification to all_users for post ${context.params.postId}. Response:`, response);
+            return { success: true };
+        } catch (error) {
+            console.error(`[onPostCreated] Error sending notification for post ${context.params.postId}:`, error);
+            return { success: false, error: error.message };
+        }
+    });

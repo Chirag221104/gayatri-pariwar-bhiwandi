@@ -16,7 +16,7 @@ import { ToastProvider } from './ui/Toast';
 
 export function Providers({ children, locale, messages }: ProvidersProps) {
     return (
-        <NextIntlClientProvider locale={locale} messages={messages}>
+        <NextIntlClientProvider locale={locale} messages={messages} timeZone="Asia/Mumbai">
             <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
                 <AuthProvider>
                     <CartProvider>

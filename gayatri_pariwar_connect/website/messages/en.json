@@ -16,7 +16,8 @@
         "login": "Login",
         "logout": "Logout",
         "settings_label": "Settings",
-        "theme_lang_label": "Theme & Language"
+        "theme_lang_label": "Theme & Language",
+        "posts": "Community Feed"
     },
     "books": {
         "header": {
