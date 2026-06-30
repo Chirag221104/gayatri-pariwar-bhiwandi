@@ -14,6 +14,7 @@ import '../domain/post.dart';
 import 'create_post_screen.dart';
 import 'comments_bottom_sheet.dart';
 import 'full_feed_screen.dart';
+import 'photo_viewer_screen.dart';
 
 class PostsFeedScreen extends ConsumerWidget {
   const PostsFeedScreen({super.key});
@@ -424,22 +425,35 @@ class _PostCardState extends ConsumerState<PostCard> {
                         setState(() => _currentPhotoIndex = index);
                       },
                       itemBuilder: (context, index) {
-                        return CachedNetworkImage(
-                          imageUrl: post.photoUrls[index],
-                          fit: BoxFit.contain, // Changed from cover to contain to prevent cropping
-                          width: double.infinity,
-                        placeholder: (context, url) => Container(
-                          color: Colors.grey[200],
-                          child: const Center(
-                              child: CircularProgressIndicator(
-                                  color: AppColors.primarySaffron)),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: Colors.grey[200],
-                          child: const Icon(Icons.broken_image,
-                              size: 60, color: Colors.grey),
-                        ),
-                      );
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => PhotoViewerScreen(
+                                  photoUrls: post.photoUrls,
+                                  initialIndex: index,
+                                ),
+                              ),
+                            );
+                          },
+                          child: CachedNetworkImage(
+                            imageUrl: post.photoUrls[index],
+                            fit: BoxFit.contain, // Changed from cover to contain to prevent cropping
+                            width: double.infinity,
+                            placeholder: (context, url) => Container(
+                              color: Colors.grey[200],
+                              child: const Center(
+                                  child: CircularProgressIndicator(
+                                      color: AppColors.primarySaffron)),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              color: Colors.grey[200],
+                              child: const Icon(Icons.broken_image,
+                                  size: 60, color: Colors.grey),
+                            ),
+                          ),
+                        );
                     },
                   ),
                   ),
