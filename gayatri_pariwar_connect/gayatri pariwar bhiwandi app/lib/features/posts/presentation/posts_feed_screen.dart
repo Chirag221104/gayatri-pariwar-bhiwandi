@@ -362,6 +362,14 @@ class _PostCardState extends ConsumerState<PostCard> {
                         onSelected: (value) async {
                           if (value == 'delete') {
                             _confirmDelete();
+                          } else if (value == 'edit') {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => CreatePostScreen(
+                                  existingPost: post,
+                                ),
+                              ),
+                            );
                           } else if (value == 'pin') {
                             if (!post.pinned && widget.pinnedCount >= 3) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -376,6 +384,16 @@ class _PostCardState extends ConsumerState<PostCard> {
                           }
                         },
                         itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit, size: 18, color: Colors.grey[700]),
+                                const SizedBox(width: 8),
+                                Text(l10n?.editPost ?? 'Edit Post'),
+                              ],
+                            ),
+                          ),
                           PopupMenuItem(
                             value: 'pin',
                             child: Text(post.pinned ? (l10n?.unpinPost ?? 'Unpin Post') : (l10n?.pinPost ?? 'Pin Post')),

@@ -11,7 +11,9 @@ import '../data/post_repository.dart';
 import '../domain/post.dart';
 
 class CreatePostScreen extends ConsumerStatefulWidget {
-  const CreatePostScreen({super.key});
+  final Post? existingPost;
+
+  const CreatePostScreen({super.key, this.existingPost});
 
   @override
   ConsumerState<CreatePostScreen> createState() => _CreatePostScreenState();
@@ -25,6 +27,19 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   bool _isUploading = false;
   double _uploadProgress = 0;
   DateTime? _selectedDate;
+
+  bool get _isEditing => widget.existingPost != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEditing) {
+      final post = widget.existingPost!;
+      _captionController.text = post.caption;
+      _tags.addAll(post.tags);
+      _selectedDate = post.createdAt;
+    }
+  }
 
   @override
   void dispose() {
@@ -160,6 +175,51 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     }
   }
 
+  Future<void> _updatePost() async {
+    final l10n = AppLocalizations.of(context);
+    final caption = _captionController.text.trim();
+    if (caption.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add a caption')),
+      );
+      return;
+    }
+
+    setState(() => _isUploading = true);
+
+    try {
+      await ref.read(postRepositoryProvider).updatePost(
+        widget.existingPost!.id,
+        caption: caption,
+        tags: _tags,
+        createdAt: _selectedDate,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n?.postUpdated ?? '✅ Post updated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n?.updatePostFailed ?? '❌ Failed to update post'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploading = false);
+      }
+    }
+  }
+
   Future<void> _createPost() async {
     if (_selectedImages.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -245,13 +305,18 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n?.createPost ?? 'Create Post'),
+        title: Text(_isEditing
+            ? (l10n?.editPostTitle ?? 'Edit Post')
+            : (l10n?.createPost ?? 'Create Post')),
         backgroundColor: AppColors.primarySaffron,
         actions: [
           if (!_isUploading)
             TextButton(
-              onPressed: _createPost,
-              child: Text(l10n?.postBtn ?? 'Post',
+              onPressed: _isEditing ? _updatePost : _createPost,
+              child: Text(
+                  _isEditing
+                      ? (l10n?.save ?? 'Save')
+                      : (l10n?.postBtn ?? 'Post'),
                   style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -265,12 +330,14 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   CircularProgressIndicator(
-                    value: _uploadProgress,
+                    value: _isEditing ? null : _uploadProgress,
                     color: AppColors.primarySaffron,
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    l10n?.uploadingProgress((_uploadProgress * 100).toInt()) ?? 'Uploading ${(_uploadProgress * 100).toInt()}%',
+                    _isEditing
+                        ? (l10n?.pleaseWait ?? 'Please wait...')
+                        : (l10n?.uploadingProgress((_uploadProgress * 100).toInt()) ?? 'Uploading ${(_uploadProgress * 100).toInt()}%'),
                     style: const TextStyle(fontSize: 16),
                   ),
                   const SizedBox(height: 8),
@@ -286,97 +353,127 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Photo Picker
-                  Text(l10n?.photos ?? 'Photos',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 120,
-                    child: Row(
-                      children: [
-                        // Add Photo Button
-                        GestureDetector(
-                          onTap: _pickImages,
-                          child: Container(
+                  // Photo Picker — only for new posts (photos can't be changed in edit mode)
+                  if (!_isEditing) ...[
+                    Text(l10n?.photos ?? 'Photos',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 120,
+                      child: Row(
+                        children: [
+                          // Add Photo Button
+                          GestureDetector(
+                            onTap: _pickImages,
+                            child: Container(
+                              width: 100,
+                              height: 100,
+                              margin: const EdgeInsets.only(right: 8),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                    color: AppColors.primarySaffron, width: 2),
+                                borderRadius: BorderRadius.circular(12),
+                                color:
+                                    AppColors.primarySaffron.withOpacity(0.05),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.add_photo_alternate,
+                                      color: AppColors.primarySaffron, size: 32),
+                                  const SizedBox(height: 4),
+                                  Text(l10n?.add ?? 'Add',
+                                      style: const TextStyle(
+                                          color: AppColors.primarySaffron,
+                                          fontSize: 12)),
+                                ],
+                              ),
+                            ),
+                          ),
+                          // Selected Images
+                          Expanded(
+                            child: ReorderableListView(
+                              scrollDirection: Axis.horizontal,
+                              onReorder: (oldIndex, newIndex) {
+                                setState(() {
+                                  if (oldIndex < newIndex) {
+                                    newIndex -= 1;
+                                  }
+                                  final item = _selectedImages.removeAt(oldIndex);
+                                  _selectedImages.insert(newIndex, item);
+                                });
+                              },
+                              children: _selectedImages.asMap().entries.map((entry) {
+                                return Stack(
+                                  key: ValueKey(entry.value.path + entry.key.toString()),
+                                  children: [
+                                    Container(
+                                      width: 100,
+                                      height: 100,
+                                      margin: const EdgeInsets.only(right: 8),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        image: DecorationImage(
+                                          image: FileImage(File(entry.value.path)),
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 2,
+                                      right: 10,
+                                      child: GestureDetector(
+                                        onTap: () => _removeImage(entry.key),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: const BoxDecoration(
+                                            color: Colors.red,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(Icons.close,
+                                              color: Colors.white, size: 14),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // Show existing photos when editing (read-only)
+                  if (_isEditing && widget.existingPost!.photoUrls.isNotEmpty) ...[
+                    Text(l10n?.photos ?? 'Photos',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 100,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: widget.existingPost!.photoUrls.length,
+                        itemBuilder: (context, index) {
+                          return Container(
                             width: 100,
                             height: 100,
                             margin: const EdgeInsets.only(right: 8),
                             decoration: BoxDecoration(
-                              border: Border.all(
-                                  color: AppColors.primarySaffron, width: 2),
                               borderRadius: BorderRadius.circular(12),
-                              color:
-                                  AppColors.primarySaffron.withOpacity(0.05),
+                              image: DecorationImage(
+                                image: NetworkImage(widget.existingPost!.photoUrls[index]),
+                                fit: BoxFit.cover,
+                              ),
                             ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.add_photo_alternate,
-                                    color: AppColors.primarySaffron, size: 32),
-                                const SizedBox(height: 4),
-                                Text(l10n?.add ?? 'Add',
-                                    style: const TextStyle(
-                                        color: AppColors.primarySaffron,
-                                        fontSize: 12)),
-                              ],
-                            ),
-                          ),
-                        ),
-                        // Selected Images
-                        Expanded(
-                          child: ReorderableListView(
-                            scrollDirection: Axis.horizontal,
-                            onReorder: (oldIndex, newIndex) {
-                              setState(() {
-                                if (oldIndex < newIndex) {
-                                  newIndex -= 1;
-                                }
-                                final item = _selectedImages.removeAt(oldIndex);
-                                _selectedImages.insert(newIndex, item);
-                              });
-                            },
-                            children: _selectedImages.asMap().entries.map((entry) {
-                              return Stack(
-                                key: ValueKey(entry.value.path + entry.key.toString()),
-                                children: [
-                                  Container(
-                                    width: 100,
-                                    height: 100,
-                                    margin: const EdgeInsets.only(right: 8),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(12),
-                                      image: DecorationImage(
-                                        image: FileImage(File(entry.value.path)),
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 2,
-                                    right: 10,
-                                    child: GestureDetector(
-                                      onTap: () => _removeImage(entry.key),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: const BoxDecoration(
-                                          color: Colors.red,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(Icons.close,
-                                            color: Colors.white, size: 14),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ],
+                          );
+                        },
+                      ),
                     ),
-                  ),
-
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 24),
+                  ],
 
                   // Caption
                   Text(l10n?.caption ?? 'Caption',

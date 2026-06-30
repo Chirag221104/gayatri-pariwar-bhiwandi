@@ -32,6 +32,23 @@ class PostRepository {
     if (kDebugMode) print('✅ PostRepository: Post created successfully');
   }
 
+  Future<void> updatePost(String postId, {
+    required String caption,
+    required List<String> tags,
+    DateTime? createdAt,
+  }) async {
+    if (kDebugMode) print('✏️ PostRepository: Updating post $postId');
+    final data = <String, dynamic>{
+      'caption': caption,
+      'tags': tags,
+    };
+    if (createdAt != null) {
+      data['createdAt'] = Timestamp.fromDate(createdAt);
+    }
+    await _postsCollection.doc(postId).update(data);
+    if (kDebugMode) print('✅ PostRepository: Post updated successfully');
+  }
+
   Future<void> deletePost(String postId) async {
     if (kDebugMode) print('🗑️ PostRepository: Deleting post $postId');
     // Delete all comments first

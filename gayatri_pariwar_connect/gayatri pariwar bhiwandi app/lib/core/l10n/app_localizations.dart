@@ -78,6 +78,10 @@ class AppLocalizations {
     String get currentTimeDefault => translate('current_time_default');
     String uploadingProgress(int percent) => translate('uploading_progress').replaceAll('{percent}', percent.toString());
     String get pleaseWait => translate('please_wait');
+    String get editPost => translate('edit_post');
+    String get editPostTitle => translate('edit_post_title');
+    String get postUpdated => translate('post_updated');
+    String get updatePostFailed => translate('update_post_failed');
     String get appName => translate('app_name');
     String get ok => translate('ok');
     String get cancel => translate('cancel');
@@ -2324,6 +2328,10 @@ static final Map<String, Map<String, String>> _localizedValues = {
       'current_time_default': 'Current time will be used if not set',
       'uploading_progress': 'Uploading... {percent}%',
       'please_wait': 'Please wait...',
+      'edit_post': 'Edit Post',
+      'edit_post_title': 'Edit Post',
+      'post_updated': '✅ Post updated successfully',
+      'update_post_failed': '❌ Failed to update post',
 
       'app_name': 'Gayatri Pariwar',
       // ... existing keys ...
@@ -4562,6 +4570,10 @@ This movement purifies and enlightens society.
       'current_time_default': 'सेट न होने पर वर्तमान समय का उपयोग किया जाएगा',
       'uploading_progress': 'अपलोड हो रहा है... {percent}%',
       'please_wait': 'कृपया प्रतीक्षा करें...',
+      'edit_post': 'पोस्ट संपादित करें',
+      'edit_post_title': 'पोस्ट संपादित करें',
+      'post_updated': '✅ पोस्ट सफलतापूर्वक अपडेट हुई',
+      'update_post_failed': '❌ पोस्ट अपडेट करने में विफल',
       'preparing_upload': 'अपलोड करने की तैयारी',
       'today_random_role': 'आज की यादृच्छिक भूमिका',
       'pick_random_student': 'छात्र का चयन करें',
@@ -6842,6 +6854,10 @@ This movement purifies and enlightens society.
       'current_time_default': 'सेट न केल्यास सद्य वेळ वापरली जाईल',
       'uploading_progress': 'अपलोड होत आहे... {percent}%',
       'please_wait': 'कृपया प्रतीक्षा करा...',
+      'edit_post': 'पोस्ट संपादित करा',
+      'edit_post_title': 'पोस्ट संपादित करा',
+      'post_updated': '✅ पोस्ट यशस्वीरित्या अपडेट झाली',
+      'update_post_failed': '❌ पोस्ट अपडेट करण्यात अयशस्वी',
       'preparing_upload': 'अपलोड करण्याची तयारी करत आहे',
       'today_random_role': 'आजची यादृच्छिक भूमिका',
       'pick_random_student': 'विद्यार्थी निवडा',
@@ -9124,6 +9140,10 @@ This movement purifies and enlightens society.
       'current_time_default': 'જો સેટ ન હોય તો વર્તમાન સમયનો ઉપયોગ થશે',
       'uploading_progress': 'અપલોડ થઈ રહ્યું છે... {percent}%',
       'please_wait': 'કૃપા કરીને રાહ જુઓ...',
+      'edit_post': 'પોસ્ટ સંપાદિત કરો',
+      'edit_post_title': 'પોસ્ટ સંપાદિત કરો',
+      'post_updated': '✅ પોસ્ટ સફળતાપૂર્વક અપડેટ થઈ',
+      'update_post_failed': '❌ પોસ્ટ અપડેટ કરવામાં નિષ્ફળ',
       'preparing_upload': 'અપલોડ કરવાની તૈયારી કરી રહ્યાં છે',
       'today_random_role': 'આજની યાદૃચ્છિક ભૂમિકા',
       'pick_random_student': 'વિદ્યાર્થી પસંદ કરો',
