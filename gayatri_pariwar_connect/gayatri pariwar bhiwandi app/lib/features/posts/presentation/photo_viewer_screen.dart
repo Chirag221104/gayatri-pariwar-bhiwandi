@@ -56,7 +56,7 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.black.withOpacity(0.9),
       body: Stack(
         children: [
           // Swipeable fullscreen images

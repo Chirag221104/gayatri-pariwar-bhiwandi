@@ -429,8 +429,9 @@ class _PostCardState extends ConsumerState<PostCard> {
                           onTap: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(
-                                builder: (context) => PhotoViewerScreen(
+                              PageRouteBuilder(
+                                opaque: false,
+                                pageBuilder: (context, _, __) => PhotoViewerScreen(
                                   photoUrls: post.photoUrls,
                                   initialIndex: index,
                                 ),
@@ -439,7 +440,7 @@ class _PostCardState extends ConsumerState<PostCard> {
                           },
                           child: CachedNetworkImage(
                             imageUrl: post.photoUrls[index],
-                            fit: BoxFit.contain, // Changed from cover to contain to prevent cropping
+                            fit: BoxFit.contain,
                             width: double.infinity,
                             placeholder: (context, url) => Container(
                               color: Colors.grey[200],
